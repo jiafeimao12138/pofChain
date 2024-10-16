@@ -1,7 +1,7 @@
 #!/bin/bash
-rm -f /home/wj/afl_testfiles/testcase_file
-rm -r /home/wj/afl_testfiles/fuzz_out
-rm -f /home/wj/afl_testfiles/testfile1
-rm -rf /home/wj/afl_testfiles/window_paths/*
-rm -rf /home/wj/afl_testfiles/window_testcases/*
+rm -f testcase_file
+rm -r fuzz_out
+rm -f testfile1
+rm -rf window_paths/*
+rm -rf window_testcases/*
 
