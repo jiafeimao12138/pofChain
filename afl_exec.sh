@@ -1,5 +1,5 @@
 !#bin/bash
-cd afl_testfiles
+cd AFL
 ./deletefiles.sh
 
-afl-fuzz -i fuzz_in/ -o fuzz_out ./objfiles/string_length1
+afl-fuzz -i fuzz_in/ -o fuzz_out ./afl_testfiles/objfiles/string_length
