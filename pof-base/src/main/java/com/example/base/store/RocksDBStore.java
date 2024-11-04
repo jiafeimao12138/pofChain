@@ -2,6 +2,8 @@ package com.example.base.store;
 
 import com.example.base.utils.SerializeUtils;
 import org.rocksdb.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -10,14 +12,14 @@ import java.util.List;
 import java.util.Optional;
 
 public class RocksDBStore {
-//    数据库路径
-    private String path;
+    static final Logger logger = LoggerFactory.getLogger(RocksDBStore.class);
+
 //    rocksdb连接
     private RocksDB rocksDB;
 
     public RocksDBStore(String path) {
         String dataPath = String.format("%s/datastore", path);
-        System.out.println(dataPath);
+        logger.info("rocksDB path:{}", dataPath);
         try {
             File directory = new File(dataPath);
             if (!directory.exists() && !directory.mkdirs()) {
@@ -41,7 +43,7 @@ public class RocksDBStore {
     public Optional<Object> get(String key)
     {
         try {
-            return Optional.of(SerializeUtils.unSerialize(rocksDB.get(key.getBytes())));
+            return Optional.of(SerializeUtils.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                unSerialize(rocksDB.get(key.getBytes())));
         } catch (Exception e) {
             e.printStackTrace();
             return Optional.empty();
@@ -77,6 +79,7 @@ public class RocksDBStore {
     {
         if (rocksDB != null) {
             rocksDB.close();
+            logger.info("rocksDB关闭");
         }
     }
 

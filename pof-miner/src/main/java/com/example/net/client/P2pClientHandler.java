@@ -1,8 +1,10 @@
 package com.example.net.client;
 
+import com.example.base.utils.SerializeUtils;
 import com.example.net.base.BaseTioHandler;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
+import com.example.net.base.PacketBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -14,10 +16,9 @@ import org.tio.core.intf.Packet;
 public class P2pClientHandler extends BaseTioHandler implements TioClientHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(P2pClientHandler.class);
-    private final MessageClientHandler clientHandler;
 
-    public P2pClientHandler(MessageClientHandler clientHandler) {
-        this.clientHandler = clientHandler;
+    public P2pClientHandler() {
+
     }
 
     @Override
@@ -34,8 +35,19 @@ public class P2pClientHandler extends BaseTioHandler implements TioClientHandler
             logger.debug("null msg body, client: {}, drop it.", channelContext.getClientNode());
             return;
         }
-//        switch (type) {
-//            case MessagePacketType.
-//        }
+        switch (type) {
+            case MessagePacketType.RES_NEW_BLOCK:
+                PacketBody packetBody = (PacketBody) SerializeUtils.unSerialize(body);
+                if (packetBody.isSuccess()) {
+                    logger.info("对方成功接收区块");
+                }
+                break;
+            case MessagePacketType.RES_NEW_MESSAGE:
+                PacketBody packetBody1 = (PacketBody) SerializeUtils.unSerialize(body);
+                if (packetBody1.isSuccess()) {
+                    logger.info("对方已接收到信息");
+                }
+                break;
+        }
     }
 }

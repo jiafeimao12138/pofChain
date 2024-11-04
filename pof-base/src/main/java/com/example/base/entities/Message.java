@@ -13,14 +13,19 @@ public class Message {
     //	发给谁 receiver
     private String to;
     private BigDecimal value;
+    private String text;
     private Long timestamp;
     private String pubKey;
 
-    public Message(String from, String to, BigDecimal value){
+    public Message() {
+
+    }
+
+    public Message(String from, String to, String text){
         this.from = from;
         this.to = to;
-        this.value = value;
         this.version = MSG_VERSION;
         this.timestamp = System.currentTimeMillis();
+        this.text = text;
     }
 }

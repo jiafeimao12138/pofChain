@@ -56,6 +56,7 @@ public class PofRunner {
                 fos.close();
 
                 genPropertiesFile(parser);
+                dbStore.close();
                 break;
 
             case "mine" :
@@ -79,9 +80,12 @@ public class PofRunner {
         genesisBlock.setTransactions(new ArrayList<>());
         genesisBlock.setNVersion(1);
         genesisBlock.setHashMerkleRoot("");
+        genesisBlock.setHeight(1);
         genesisBlock.setNTime(System.currentTimeMillis());
 
         dbStore.put(BlockService.BLOCK_PREFIX + genesisBlock.GetHash(), genesisBlock);
+        dbStore.put(BlockService.HEIGHT_PREFIX, genesisBlock.getHeight());
+
         logger.info("Successfully create genesis block and store in database. Hash is {}.", genesisBlock.GetHash());
         return genesisBlock;
     }

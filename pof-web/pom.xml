@@ -10,11 +10,11 @@
     </parent>
 
     <groupId>com.example</groupId>
-    <artifactId>web</artifactId>
+    <artifactId>pof-web</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>web</name>
+    <name>pof-web</name>
     <description>web</description>
 
     <properties>
@@ -32,12 +32,12 @@
         </dependency>
         <dependency>
             <groupId>com.example</groupId>
-            <artifactId>miner</artifactId>
+            <artifactId>pof-miner</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.example</groupId>
-            <artifactId>base</artifactId>
+            <artifactId>pof-base</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
 

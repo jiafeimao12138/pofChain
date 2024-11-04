@@ -6,7 +6,7 @@ import lombok.Data;
 public class PacketBody {
     private Object item;
     // operation result
-    private boolean success = false;
+    private boolean isSuccess = false;
     // error message
     private String message;
 
@@ -15,6 +15,6 @@ public class PacketBody {
 
     public PacketBody(Object item, boolean status) {
         this.item = item;
-        this.success = status;
+        this.isSuccess = status;
     }
 }

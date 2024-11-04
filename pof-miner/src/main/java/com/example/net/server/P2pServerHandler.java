@@ -38,6 +38,14 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 logger.info("hello message: {}", SerializeUtils.unSerialize(msgBody));
                 responsePacket = serverHandler.helloMessage(msgBody);
                 break;
+            case MessagePacketType.REQ_NEW_BLOCK:
+                logger.info("处理接收到的新区块");
+                responsePacket = serverHandler.receiveNewBlock(msgBody);
+                break;
+            case MessagePacketType.REQ_NEW_MESSAGE:
+                logger.info("处理接收到的新消息");
+                responsePacket = serverHandler.receiveNewMsg(msgBody);
+                break;
         }
         if (responsePacket != null){
             Tio.send(channelContext, responsePacket);

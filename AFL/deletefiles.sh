@@ -1,5 +1,6 @@
 #!/bin/bash
 rm -rf ../datastore
+rm -rf ../data
 rm -rf fuzz_out
 rm -f testfile1
 rm -f testcase_file

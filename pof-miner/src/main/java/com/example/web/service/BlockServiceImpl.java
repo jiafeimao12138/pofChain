@@ -3,13 +3,17 @@ package com.example.web.service;
 
 import com.example.base.entities.Block;
 import com.example.base.store.RocksDBStore;
+import com.example.miner.Miner;
 import com.example.miner.chain.Chain;
 import com.example.miner.pof.PoFMiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Optional;
 
 /**
  * @author jiafeimao
@@ -26,35 +30,67 @@ public class BlockServiceImpl implements BlockService{
     String dir_path = System.getProperty("user.dir");
     RocksDBStore rocksDBStore = new RocksDBStore(dir_path);
 
-    public Block generateGenesisBlock() {
+    @Autowired
+    private Miner miner;
 
-        Block genesisBlock = new Block();
-        genesisBlock.setHashPreBlock("00000000000000");
-        genesisBlock.setNBits(0x1d00ffff);
-        genesisBlock.setNNonce(2083236893);
-        genesisBlock.setTransactions(new ArrayList<>());
-        genesisBlock.setNVersion(1);
-        genesisBlock.setHashMerkleRoot("");
-        genesisBlock.setNTime(System.currentTimeMillis());
-
-        rocksDBStore.put(BLOCK_PREFIX + genesisBlock.GetHash(), genesisBlock);
-        logger.info("Successfully create genesis block and store in database. Hash is {}.", genesisBlock.GetHash());
-        return genesisBlock;
+    @Override
+    public void startMining() {
+        new Thread(() -> {
+            logger.info("开始进行Fuzzing挖矿");
+            try {
+                Block preBlock = getLatestBlock();
+                miner.mineAndFuzzing(preBlock);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
     }
 
-    public Block addBlock() {
-//        Chain chain = new Chain(new PoFMiner());
-//        chain.run();
-        return new Block();
-    }
-
-    public boolean storeBlock(Block block) {
-        rocksDBStore.put(BLOCK_PREFIX + block.GetHash(), block);
+    //存储新区块到本地区块链中
+    public boolean storeBlock(Block newBlock) {
+        if (!rocksDBStore.put(BLOCK_PREFIX + newBlock.height, newBlock)) {
+            logger.info("存入新区块失败");
+            return false;
+        }
+        if (!rocksDBStore.put(HEIGHT_PREFIX, newBlock.height)){
+            logger.info("存入最新高度失败");
+            return false;
+        }
+        rocksDBStore.close();
+        logger.info("存入新区块，高度为{}，hash={}", newBlock.height, newBlock.GetHash());
         return true;
     }
 
-    public Block getPreBlock() {
-        Block b = new Block();
-        return b;
+    // 获取本地区块链中最新的链
+    public Block getLatestBlock() {
+        Block block = new Block();
+        Optional<Object> o = rocksDBStore.get(HEIGHT_PREFIX);
+        rocksDBStore.close();
+        if (o.isPresent()) {
+            long height = (long)o.get();
+            block = getBlockByHeight(height);
+        }
+        return block;
+    }
+
+    @Override
+    public boolean validateNewBlock(Block newBlock) {
+        return true;
+    }
+
+    @Override
+    public void testBlocks() {
+
+    }
+
+    @Override
+    public Block getBlockByHeight(long height) {
+        rocksDBStore.get(HEIGHT_PREFIX + height);
+        return null;
+    }
+
+    @Override
+    public Block getBlockByHash(String hash) {
+        return null;
     }
 }

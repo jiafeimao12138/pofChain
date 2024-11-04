@@ -9,11 +9,11 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.example</groupId>
-	<artifactId>base</artifactId>
+	<artifactId>pof-base</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>base</name>
+	<name>pof-base</name>
 	<description>base</description>
 
 	<properties>

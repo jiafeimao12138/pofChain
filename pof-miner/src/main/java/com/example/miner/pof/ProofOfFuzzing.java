@@ -3,11 +3,11 @@ package com.example.miner.pof;
 import com.example.base.Exception.WindowFileException;
 import com.example.base.entities.Block;
 import com.example.base.entities.Transaction;
-import com.example.base.utils.CryptoUtils;
+import com.example.base.store.RocksDBStore;
 import com.example.base.utils.WindowFileUtils;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewBlockEvent;
-import com.example.web.service.BlockServiceImpl;
+import com.example.web.service.BlockService;
 import org.apache.commons.lang3.tuple.Triple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,23 +24,18 @@ import java.util.Random;
  * @author jiafeimao
  * @date 2024年09月15日 15:01
  */
-
 public class ProofOfFuzzing {
 
     private static final Logger logger = LoggerFactory.getLogger(ProofOfFuzzing.class);
-    private final String preHash;
-    //当前区块高度
-    private final long height;
 
-    public BlockServiceImpl blockService;
+    private final Block preBlock;
 
-    public static ProofOfFuzzing newProofOfFuzzing(String preHash, long height) {
-        return new ProofOfFuzzing(preHash, height);
+    public static ProofOfFuzzing newProofOfFuzzing(Block preBlock) {
+        return new ProofOfFuzzing(preBlock);
     }
 
-    public ProofOfFuzzing(String preHash, long height) {
-        this.preHash = preHash;
-        this.height = height;
+    public ProofOfFuzzing(Block preBlock) {
+        this.preBlock = preBlock;
     }
 
 //   TODO: 动态更新hash区间
@@ -53,9 +48,8 @@ public class ProofOfFuzzing {
 ////                String shellCommand1 = "./switchRoot.sh";
 ////                String shellCommand2 = "s";
 //                String shellCommand3 = "sh /home/wj/pofChain/afl_exec.sh";
-                String shellCommand3 = "cd AFL && afl-fuzz -i fuzz_in/ -o fuzz_out ./afl_testfiles/objfiles/string_length";
-////                executeShellScript(shellCommand1);
-                executeCommand(shellCommand3);
+                String shellCommand = "cd AFL && afl-fuzz -i fuzz_in/ -o fuzz_out ./afl_testfiles/objfiles/string_length";
+                executeCommand(shellCommand);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -80,7 +74,6 @@ public class ProofOfFuzzing {
             while ((line = reader.readLine()) != null) {
                 System.out.println(line);
                 if (line.contains("new window start")){
-                    Block preBlock = new Block();
                     List<Transaction> transactions = new ArrayList<>();
                     List<Triple<String, List<Integer>, Boolean>> triples;
                     try {
@@ -92,9 +85,22 @@ public class ProofOfFuzzing {
                         throw new RuntimeException(e);
                     }
                     Block newBlock = computeWindowHash(preBlock, transactions, triples);
+                    logger.info("挖矿成功，新区块高度为{}，hash={}，前一个区块hash={}",
+                            newBlock.height, newBlock.GetHash(),newBlock.getHashPreBlock());
                     // 广播
                     ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
                     logger.info("广播新Block,hash={}", newBlock.GetHash());
+                    String dir_path = System.getProperty("user.dir");
+                    RocksDBStore rocksDBStore = new RocksDBStore(dir_path);
+                    if (!rocksDBStore.put(BlockService.BLOCK_PREFIX + newBlock.height, newBlock)) {
+                        logger.info("存入新区块失败");
+                    }
+                    if (!rocksDBStore.put(BlockService.HEIGHT_PREFIX, newBlock.height)){
+                        logger.info("存入最新高度失败");
+                    }
+                    rocksDBStore.close();
+                    logger.info("存入新区块，高度为{}，hash={}", newBlock.height, newBlock.GetHash());
+
                 }
             }
 
@@ -117,6 +123,7 @@ public class ProofOfFuzzing {
         Random random = new Random();
         long nonce = random.nextInt();
         long timestamp = System.currentTimeMillis();
+        long height = preBlock.getHeight() + 1;
 
         Block newBlock = new Block();
         newBlock.setNVersion(1);
