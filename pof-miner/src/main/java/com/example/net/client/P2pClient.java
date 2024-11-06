@@ -73,6 +73,4 @@ public class P2pClient {
         Tio.send(channelContext, packet);
         return true;
     }
-
-
 }

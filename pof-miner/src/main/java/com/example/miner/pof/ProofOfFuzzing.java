@@ -2,6 +2,7 @@ package com.example.miner.pof;
 
 import com.example.base.Exception.WindowFileException;
 import com.example.base.entities.Block;
+import com.example.base.entities.Payload;
 import com.example.base.entities.Transaction;
 import com.example.base.store.RocksDBStore;
 import com.example.base.utils.WindowFileUtils;
@@ -29,6 +30,7 @@ public class ProofOfFuzzing {
     private static final Logger logger = LoggerFactory.getLogger(ProofOfFuzzing.class);
 
     private final Block preBlock;
+    private RocksDBStore rocksDBStore = new RocksDBStore("./data/genesis");
 
     public static ProofOfFuzzing newProofOfFuzzing(Block preBlock) {
         return new ProofOfFuzzing(preBlock);
@@ -75,7 +77,7 @@ public class ProofOfFuzzing {
                 System.out.println(line);
                 if (line.contains("new window start")){
                     List<Transaction> transactions = new ArrayList<>();
-                    List<Triple<String, List<Integer>, Boolean>> triples;
+                    List<Payload> triples;
                     try {
                         triples = WindowFileUtils.windowFilesToTriple(
                                 "/home/wj/pofChain/AFL/afl_testfiles/window_testcases/testcase_" + num,
@@ -86,20 +88,19 @@ public class ProofOfFuzzing {
                     }
                     Block newBlock = computeWindowHash(preBlock, transactions, triples);
                     logger.info("挖矿成功，新区块高度为{}，hash={}，前一个区块hash={}",
-                            newBlock.height, newBlock.GetHash(),newBlock.getHashPreBlock());
+                            newBlock.getHeight(), newBlock.GetHash(),newBlock.getHashPreBlock());
                     // 广播
                     ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
                     logger.info("广播新Block,hash={}", newBlock.GetHash());
-                    String dir_path = System.getProperty("user.dir");
-                    RocksDBStore rocksDBStore = new RocksDBStore(dir_path);
-                    if (!rocksDBStore.put(BlockService.BLOCK_PREFIX + newBlock.height, newBlock)) {
+
+                    if (!rocksDBStore.put(BlockService.BLOCK_PREFIX + newBlock.getHeight(), newBlock)) {
                         logger.info("存入新区块失败");
                     }
-                    if (!rocksDBStore.put(BlockService.HEIGHT_PREFIX, newBlock.height)){
+                    if (!rocksDBStore.put(BlockService.HEIGHT, newBlock.getHeight())){
                         logger.info("存入最新高度失败");
                     }
                     rocksDBStore.close();
-                    logger.info("存入新区块，高度为{}，hash={}", newBlock.height, newBlock.GetHash());
+                    logger.info("存入新区块，高度为{}，hash={}", newBlock.getHeight(), newBlock.GetHash());
 
                 }
             }
@@ -119,7 +120,9 @@ public class ProofOfFuzzing {
 *   sha256(preBlock, nonce, transactions, List<input, path, is_craash>, timestamp)
 *   返回执行窗口的hash值
 * */
-    public Block computeWindowHash(Block preBlock, List<Transaction> transactionList, List<Triple<String,List<Integer>,Boolean>> triples){
+    public Block computeWindowHash(Block preBlock,
+                                   List<Transaction> transactionList,
+                                   List<Payload> triples){
         Random random = new Random();
         long nonce = random.nextInt();
         long timestamp = System.currentTimeMillis();

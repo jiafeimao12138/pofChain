@@ -25,7 +25,7 @@ public class Block implements Serializable {
     public long height = 1;
     public long nTime;
     public long nNonce;
-    public List<Triple<String,List<Integer>,Boolean>> triples = new ArrayList<>();
+    public List<Payload> triples = new ArrayList<>();
 
 
     //    当前的hash目标
@@ -51,7 +51,7 @@ public class Block implements Serializable {
                  long nNonce,
                  int nBits,
                  List<Transaction> transactions,
-                 List<Triple<String,List<Integer>,Boolean>> triples) {
+                 List<Payload> triples) {
         this.nVersion = nVersion;
         this.hashPreBlock = hashPreBlock;
         this.hashMerkleRoot = hashMerkleRoot;

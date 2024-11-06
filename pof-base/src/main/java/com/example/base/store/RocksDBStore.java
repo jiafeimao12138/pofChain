@@ -4,6 +4,7 @@ import com.example.base.utils.SerializeUtils;
 import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -11,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class RocksDBStore {
+public class RocksDBStore implements DBStore{
     static final Logger logger = LoggerFactory.getLogger(RocksDBStore.class);
 
 //    rocksdb连接
@@ -43,9 +44,10 @@ public class RocksDBStore {
     public Optional<Object> get(String key)
     {
         try {
-            return Optional.of(SerializeUtils.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                unSerialize(rocksDB.get(key.getBytes())));
+            return Optional.of(SerializeUtils.unSerialize(rocksDB.get(key.getBytes())));
         } catch (Exception e) {
-            e.printStackTrace();
+            // ignore
+//            e.printStackTrace();
             return Optional.empty();
         }
     }

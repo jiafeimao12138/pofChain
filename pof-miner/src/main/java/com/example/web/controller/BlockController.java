@@ -24,6 +24,7 @@ public class BlockController {
         blockService.startMining();
     }
 
+
     @RequestMapping("test")
     public void test() throws InterruptedException {
         int i = 0;

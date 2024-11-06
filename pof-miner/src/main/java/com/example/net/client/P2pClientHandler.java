@@ -40,6 +40,8 @@ public class P2pClientHandler extends BaseTioHandler implements TioClientHandler
                 PacketBody packetBody = (PacketBody) SerializeUtils.unSerialize(body);
                 if (packetBody.isSuccess()) {
                     logger.info("对方成功接收区块");
+                } else {
+                    logger.info("对方拒绝接收该区块");
                 }
                 break;
             case MessagePacketType.RES_NEW_MESSAGE:

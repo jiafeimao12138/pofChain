@@ -1,6 +1,7 @@
 package com.example.base.utils;
 
 import com.example.base.Exception.WindowFileException;
+import com.example.base.entities.Payload;
 import org.apache.commons.lang3.tuple.Triple;
 
 import java.io.*;
@@ -13,14 +14,14 @@ import java.util.List;
 * */
 public class WindowFileUtils {
 
-    static List<Triple<String,List<Integer>,Boolean>> payloads = new ArrayList<>();
+    static List<Payload> payloads = new ArrayList<>();
     static List<String> cases_list = new ArrayList<>();
     static List<List<Integer>> paths_list = new ArrayList<>();
 //    上一个窗口最后一个case和它的path
     static String lastWindowcase = "";
     static List<Integer> lastWindowpath = new ArrayList<>();
 
-    public static List<Triple<String,List<Integer>,Boolean>> windowFilesToTriple(String testcase, String paths) throws WindowFileException{
+    public static List<Payload> windowFilesToTriple(String testcase, String paths) throws WindowFileException{
 
         StringBuilder stringBuilder = new StringBuilder();
 
@@ -132,8 +133,9 @@ public class WindowFileUtils {
             } else {
                 is_crash = false;
             }
+            Payload payload = new Payload(cases_list.get(i), paths_list.get(i), is_crash);
             Triple<String, List<Integer>, Boolean> triplet = Triple.of(cases_list.get(i), paths_list.get(i), is_crash);
-            payloads.add(triplet);
+            payloads.add(payload);
         }
 
         lastWindowcase = cases_list.get(cases_list.size()-1);
@@ -225,15 +227,15 @@ public class WindowFileUtils {
         int num = 6;
 //        while (num <= 20){
             System.out.println("num=" + num);
-            List<Triple<String, List<Integer>, Boolean>> triples =
+            List<Payload> triples =
                     WindowFileUtils.windowFilesToTriple("/home/wj/pofChain/AFL/afl_testfiles/window_testcases/testcase_" + num,
                             "/home/wj/pofChain/AFL/afl_testfiles/window_paths/testfile_" + num);
             num ++;
             for (int i = 0; i < triples.size(); i++) {
-                Triple<String, List<Integer>, Boolean> triple = triples.get(i);
-                String left = triple.getLeft();
-                List<Integer> middle = triple.getMiddle();
-                Boolean right = triple.getRight();
+                Payload triple = triples.get(i);
+                String left = triple.getInput();
+                List<Integer> middle = triple.getPath();
+                Boolean right = triple.isCrash();
                 System.out.print("[" + left + ":");
                 for (int j = 0; j < middle.size(); j++) {
                     System.out.print(middle.get(j) + "->");

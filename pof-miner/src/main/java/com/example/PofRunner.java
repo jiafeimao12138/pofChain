@@ -54,9 +54,7 @@ public class PofRunner {
                 FileOutputStream fos = new FileOutputStream(genesisFile);
                 fos.write(bytes);
                 fos.close();
-
                 genPropertiesFile(parser);
-                dbStore.close();
                 break;
 
             case "mine" :
@@ -66,6 +64,7 @@ public class PofRunner {
                 }
                 dbStore = new RocksDBStore(repo);
                 genPropertiesFile(parser);
+                dbStore.close();
                 break;
         }
         return true;
@@ -83,8 +82,9 @@ public class PofRunner {
         genesisBlock.setHeight(1);
         genesisBlock.setNTime(System.currentTimeMillis());
 
-        dbStore.put(BlockService.BLOCK_PREFIX + genesisBlock.GetHash(), genesisBlock);
-        dbStore.put(BlockService.HEIGHT_PREFIX, genesisBlock.getHeight());
+        dbStore.put(BlockService.BLOCK_PREFIX + genesisBlock.getHeight(), genesisBlock);
+        dbStore.put(BlockService.HEIGHT, genesisBlock.getHeight());
+        dbStore.close();
 
         logger.info("Successfully create genesis block and store in database. Hash is {}.", genesisBlock.GetHash());
         return genesisBlock;

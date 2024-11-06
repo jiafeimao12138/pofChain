@@ -1,14 +1,42 @@
 package com.example.base.entities;
 
-import lombok.Data;
 
-@Data
-public class Payload {
+import java.io.Serializable;
+import java.util.List;
+
+public class Payload implements Serializable {
     private String input;
-    private String path;
+    private List<Integer> path;
     private boolean isCrash;
 
-    public Payload(String input, String path, boolean isCrash) {
+    public String getInput() {
+        return input;
+    }
+
+    public void setInput(String input) {
+        this.input = input;
+    }
+
+    public List<Integer> getPath() {
+        return path;
+    }
+
+    public void setPath(List<Integer> path) {
+        this.path = path;
+    }
+
+    public boolean isCrash() {
+        return isCrash;
+    }
+
+    public void setCrash(boolean crash) {
+        isCrash = crash;
+    }
+
+    public Payload(){
+
+    }
+    public Payload(String input, List<Integer> path, boolean isCrash) {
         this.input = input;
         this.path = path;
         this.isCrash = isCrash;
