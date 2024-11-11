@@ -17,5 +17,6 @@ public interface BlockService {
     void testBlocks();
     Block getBlockByHeight(long height) throws IllegalBlockException;
     Block getBlockByHash(String hash);
+    boolean AFLswitchRoot();
 
 }

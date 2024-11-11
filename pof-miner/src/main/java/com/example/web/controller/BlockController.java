@@ -21,9 +21,10 @@ public class BlockController {
 
     @RequestMapping("startmining")
     public void mine() {
-        blockService.startMining();
+        if (blockService.AFLswitchRoot()){
+            blockService.startMining();
+        }
     }
-
 
     @RequestMapping("test")
     public void test() throws InterruptedException {

@@ -87,26 +87,30 @@ public class BlockServiceImpl implements BlockService{
                 System.out.println(line);
                 if (line.contains("new window start")){
                     List<Transaction> transactions = new ArrayList<>();
-                    List<Payload> triples;
                     try {
+                        List<Payload> triples;
                         triples = WindowFileUtils.windowFilesToTriple(
                                 "/home/wj/pofChain/AFL/afl_testfiles/window_testcases/testcase_" + num,
                                 "/home/wj/pofChain/AFL/afl_testfiles/window_paths/testfile_" + num);
                         num ++;
+                        Block preBlock = getLatestBlock();
+                        Block newBlock = computeWindowHash(preBlock, transactions, triples);
+                        logger.info("挖矿成功，新区块高度为{}，hash={}，前一个区块hash={}",
+                                newBlock.getHeight(), newBlock.GetHash(),newBlock.getHashPreBlock());
+                        // 广播
+                        ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
+                        logger.info("广播新Block,hash={}", newBlock.GetHash());
+                        storeBlock(newBlock);
+                        rocksDBStore.get(BLOCK_PREFIX + newBlock.getHeight());
+//                    rocksDBStore.close();
+                        logger.info("存入新区块，高度为{}，hash={}", newBlock.getHeight(), newBlock.GetHash());
+                        triples.clear();
+
                     } catch (WindowFileException e) {
                         throw new RuntimeException(e);
                     }
-                    Block preBlock = getLatestBlock();
-                    Block newBlock = computeWindowHash(preBlock, transactions, triples);
-                    logger.info("挖矿成功，新区块高度为{}，hash={}，前一个区块hash={}",
-                            newBlock.getHeight(), newBlock.GetHash(),newBlock.getHashPreBlock());
-                    // 广播
-                    ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
-                    logger.info("广播新Block,hash={}", newBlock.GetHash());
-                    storeBlock(newBlock);
-                    rocksDBStore.get(BLOCK_PREFIX + newBlock.getHeight());
-//                    rocksDBStore.close();
-                    logger.info("存入新区块，高度为{}，hash={}", newBlock.getHeight(), newBlock.GetHash());
+
+
 
                 }
             }
@@ -171,6 +175,7 @@ public class BlockServiceImpl implements BlockService{
 
     @Override
     public boolean validateNewBlock(Block newBlock) {
+        logger.info("newBlock hash: {}", newBlock.GetHash());
         return true;
     }
 
@@ -195,4 +200,29 @@ public class BlockServiceImpl implements BlockService{
     public Block getBlockByHash(String hash) {
         return null;
     }
+
+    @Override
+    public boolean AFLswitchRoot() {
+        try {
+            // 指定脚本的路径
+            ProcessBuilder processBuilder = new ProcessBuilder("./switchRoot.sh");
+            // 启动进程
+            Process process = processBuilder.start();
+            // 获取脚本输出
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+            // 等待脚本执行完成
+            int exitCode = process.waitFor();
+            System.out.println("Exited with code: " + exitCode);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+
 }

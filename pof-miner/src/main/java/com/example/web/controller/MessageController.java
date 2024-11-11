@@ -11,9 +11,9 @@ public class MessageController {
     @Autowired
     MessageService messageService;
 
-    @RequestMapping("/sendMsg")
-    public void sendMessage(){
-        messageService.sendMessage(new Message("from","to","hello"));
+    @RequestMapping("/publishMsg")
+    public void publishMsg(){
+        messageService.publishMsg(new Message("from","to","hello"));
     }
 
 }
