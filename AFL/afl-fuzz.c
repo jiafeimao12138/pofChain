@@ -7135,8 +7135,8 @@ int verify(){
 
 static void handle_timeout(int sig) {
 
-  printf("start to verify\n");
-  printf("==========================================");
+//  printf("start to verify\n");
+//  printf("==========================================");
   
   // if (sigalrm_id == 0)
   // {
@@ -7155,8 +7155,8 @@ static void handle_timeout(int sig) {
   // else{
     // printf("Caught signal %d\n", sig);
    
-        printf("\nhandle_timeout: pid=%d, cnt=%d\n", getpid(), ++timeout_handle_cnt);
-        printf("child_pid=%d\n", child_pid);
+//        printf("\nhandle_timeout: pid=%d, cnt=%d\n", getpid(), ++timeout_handle_cnt);
+//        printf("child_pid=%d\n", child_pid);
         char *path_source = "testfile1";
         char *case_source = "testcase_file";
         testfile_id += 1;
@@ -7166,7 +7166,7 @@ static void handle_timeout(int sig) {
         sprintf(path_dest, "./afl_testfiles/window_paths/testfile_%d", testfile_id);
         if(child_pid > 0){
           kill(child_pid, SIGSTOP);
-          printf("==========================================");
+//          printf("==========================================");
           // 处理上个窗口的path和case
           printf("testfile_id=%d\n", testfile_id);
 
@@ -7174,31 +7174,32 @@ static void handle_timeout(int sig) {
           //  TODO：文件名以时间戳命名
           copy_by_char(case_dest, case_source);
           copy_by_char(path_dest, path_source);
-          int result = verify();
-          if(result != 0){
-             FATAL("verify error");
-          }
-          printf("new window start");
+//          int result = verify();
+//          if(result != 0){
+//             FATAL("verify error");
+//          }
           kill(child_pid, SIGCONT);
         }
         else{
-          printf("复制前child_pid=%d, cnt = %d\n", child_pid, ++childpidzerocnt);
+//          printf("复制前child_pid=%d, cnt = %d\n", child_pid, ++childpidzerocnt);
 
           copy_by_char(case_dest, case_source);
           copy_by_char(path_dest, path_source);
-          printf("复制后child_pid=%d, cnt = %d\n",  child_pid, childpidzerocnt);
-          int result = verify();
-          if(result != 0){
-             FATAL("verify error");
-          }
-          printf("new window start");
+//          printf("复制后child_pid=%d, cnt = %d\n",  child_pid, childpidzerocnt);
+//          int result = verify();
+//          if(result != 0){
+//             FATAL("verify error");
+//          }
           // kill(child_pid, SIGCONT);
         }
-        
+        printf("this window end");
+
+
 //     重新设置定时器
        timer.it_value.tv_sec = 1;      
-       timer.it_value.tv_usec = 500;    
+       timer.it_value.tv_usec = 0;
        setitimer(ITIMER_REAL, &timer, NULL);
+       printf("new window start");
     
   }
   
@@ -8445,8 +8446,9 @@ int main(int argc, char** argv) {
   // rlim.rlim_max = RLIM_INFINITY;
   // setrlimit(RLIMIT_CPU, &rlim);
   timer.it_value.tv_sec = 1;      // 首次触发前的延迟时间（秒）
-  timer.it_value.tv_usec = 500;     // 首次触发前的延迟时间（微秒）
+  timer.it_value.tv_usec = 0;     // 首次触发前的延迟时间（微秒）
   setitimer(ITIMER_REAL, &timer, NULL);
+  printf("new window start");
 
   
 

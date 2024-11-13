@@ -37,7 +37,7 @@ public class WindowFileUtils {
 //            }
             String str = new String(fileBytes);
             String[] split = str.split("mem=");
-            System.out.println("case:" + (split.length-1));
+//            System.out.println("case:" + (split.length-1));
             cases_list = new ArrayList<>(Arrays.asList(split).subList(1,split.length));
 //            for (int i = 0; i < cases_list.size(); i++) {
 //                System.out.println(i + ":" + cases_list.get(i));
@@ -91,10 +91,10 @@ public class WindowFileUtils {
                 // 这时paths_list的第一条路径就是这条残余路径
                 paths_list.add(path);
                 cases_list.add(0,lastWindowcase);
-                System.out.println("path:" + pathsplits.length);
-                System.out.println("case:" + cases_list.size());
+//                System.out.println("path:" + pathsplits.length);
+//                System.out.println("case:" + cases_list.size());
             } else {
-                System.out.println("path:" + (pathsplits.length - 1));
+//                System.out.println("path:" + (pathsplits.length - 1));
             }
             for (int i = 1; i < pathsplits.length; i++) {
                 String Hexpath = pathsplits[i];
@@ -125,6 +125,9 @@ public class WindowFileUtils {
 //        }
 //     存入triple中
         // @TODO: 为什么两者会不相等？
+        if(cases_list.isEmpty() || paths_list.isEmpty()) {
+            throw new WindowFileException("cases_list或者paths_list为空");
+        }
         for (int i = 0; i < Math.min(cases_list.size(), paths_list.size()); i++) {
             String s = cases_list.get(i);
             boolean is_crash;
@@ -134,7 +137,6 @@ public class WindowFileUtils {
                 is_crash = false;
             }
             Payload payload = new Payload(cases_list.get(i), paths_list.get(i), is_crash);
-            Triple<String, List<Integer>, Boolean> triplet = Triple.of(cases_list.get(i), paths_list.get(i), is_crash);
             payloads.add(payload);
         }
 
@@ -154,7 +156,7 @@ public class WindowFileUtils {
             for (int p : lastWindowpath) {
                 dos.writeInt(p);
             }
-            System.out.println("数据已写入文件: " + fileName);
+//            System.out.println("数据已写入文件: " + fileName);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -190,7 +192,7 @@ public class WindowFileUtils {
                 lastWindowcase = new String(lastcase.getBytes(), 0, lastcase.length());
 //                @TODO:二进制转换成字符
                 String lastwindowcaseStr = hexToBinary(lastWindowcase);
-                System.out.println("lastcase:" + lastwindowcaseStr);
+//                System.out.println("lastcase:" + lastwindowcaseStr);
 
                 String paths = string.substring(len * 4 + 8, string.length());
 //                处理paths，拆分为整数，赋值给lastWindowpath
