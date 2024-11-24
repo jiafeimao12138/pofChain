@@ -1,20 +1,12 @@
 package com.example.miner.chain;
 
-import com.example.base.entities.Block;
-import com.example.base.entities.Message;
 import com.example.miner.Miner;
-import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.conf.MinerConfig;
-import com.example.net.events.NewMsgEvent;
-import com.example.web.service.BlockService;
-import com.example.web.service.BlockServiceImpl;
+import com.example.web.service.MiningService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-
-import javax.annotation.PostConstruct;
-import java.math.BigDecimal;
 
 /**
  * @author jiafeimao
@@ -27,12 +19,12 @@ public class Chain {
     private static final Logger logger = LoggerFactory.getLogger(Chain.class);
     @Qualifier(value = "pofMiner")
     private final Miner miner;
-    private final BlockService blockService;
+    private final MiningService miningService;
     private final MinerConfig minerConfig;
 
-    public Chain(Miner miner, BlockService blockService, MinerConfig minerConfig) {
+    public Chain(Miner miner, MiningService miningService, MinerConfig minerConfig) {
         this.miner = miner;
-        this.blockService = blockService;
+        this.miningService = miningService;
         this.minerConfig = minerConfig;
     }
 

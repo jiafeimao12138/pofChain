@@ -7,6 +7,7 @@ public class PacketBody {
     private Object item;
     // operation result
     private boolean isSuccess = false;
+    private PacketMsgType packetMsgType;
     // error message
     private String message;
 
@@ -16,5 +17,12 @@ public class PacketBody {
     public PacketBody(Object item, boolean status) {
         this.item = item;
         this.isSuccess = status;
+    }
+
+    public PacketBody(Object item, PacketMsgType packetMsgType) {
+        this.item = item;
+        this.packetMsgType = packetMsgType;
+        this.isSuccess = packetMsgType.equals(PacketMsgType.SUCEESS);
+        this.message = packetMsgType.getDescription();
     }
 }

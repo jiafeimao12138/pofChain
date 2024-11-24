@@ -1,5 +1,6 @@
 package com.example.net.server;
 
+import com.example.base.entities.Block;
 import com.example.base.utils.SerializeUtils;
 import com.example.net.base.BaseTioHandler;
 import com.example.net.base.MessagePacket;
@@ -49,6 +50,12 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
             case MessagePacketType.REQ_NEW_MESSAGE:
                 logger.info("处理接收到的新消息");
                 responsePacket = serverHandler.receiveNewMsg(msgBody);
+                break;
+            case MessagePacketType.REQ_BLOCK_BY_HEIGHT:
+                responsePacket = serverHandler.receiveGetBlockByHeight(msgBody);
+                break;
+            case MessagePacketType.REQ_HEIGHT:
+                serverHandler.receiveHeightReq(msgBody);
                 break;
         }
         if (responsePacket != null){

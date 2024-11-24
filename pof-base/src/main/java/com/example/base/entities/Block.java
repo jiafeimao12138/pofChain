@@ -19,60 +19,29 @@ import java.util.List;
 @Data
 public class Block implements Serializable {
 //    header
-    public int nVersion;
-    public String hashPreBlock;
-    public String hashMerkleRoot;
-    public long height = 1;
-    public long nTime;
-    public long nNonce;
-    public List<Payload> triples = new ArrayList<>();
-
-
-    //    当前的hash目标
-    public int nBits;
-
-    public List<Transaction> transactions;
+    private BlockHeader blockHeader;
+    private List<Transaction> transactions = new ArrayList<>();
+    private String hash;
 
     public Block() {
-        this.nVersion = 1;
-        this.hashPreBlock = "";
-        this.hashMerkleRoot = "";
-        this.nTime = 0;
-        this.nNonce = 0;
-        this.nBits = 0;
-        this.transactions = new ArrayList<>();
     }
 
-    public Block(int nVersion,
-                 String hashPreBlock,
-                 String hashMerkleRoot,
-                 long height,
-                 long nTime,
-                 long nNonce,
-                 int nBits,
-                 List<Transaction> transactions,
-                 List<Payload> triples) {
-        this.nVersion = nVersion;
-        this.hashPreBlock = hashPreBlock;
-        this.hashMerkleRoot = hashMerkleRoot;
-        this.height = height;
-        this.nTime = nTime;
-        this.nNonce = nNonce;
-        this.nBits = nBits;
+    public Block(BlockHeader blockHeader,
+                 List<Transaction> transactions
+                 ) {
+        this.blockHeader = blockHeader;
         this.transactions = transactions;
-        this.triples = triples;
+        this.hash = GetHash();
     }
 
-    public String GetHash() {
+    public String getHash() {
+        return hash;
+    }
+
+    private String GetHash() {
         StringBuilder sb = new StringBuilder();
-        sb.append(this.hashPreBlock);
-        sb.append(this.height);
-        sb.append(this.nNonce);
-        sb.append(this.nTime);
-        sb.append(this.transactions);
-        sb.append(this.triples);
-        sb.append(this.hashMerkleRoot);
-        sb.append(this.nVersion);
+        sb.append(this.blockHeader.toString());
+        sb.append(this.transactions.toString());
         String sha256 = CryptoUtils.SHA256(sb.toString());
         return sha256;
     }

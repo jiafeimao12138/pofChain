@@ -1,7 +1,11 @@
 package com.example.net.server;
 
+import com.example.net.conf.ApplicationContextProvider;
+import com.example.net.events.GetBlocksEvent;
+import com.example.web.service.ChainService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.tio.core.ChannelContext;
 import org.tio.core.intf.Packet;
@@ -21,7 +25,6 @@ public class P2pServerListener implements TioServerListener {
     public void onAfterConnected(ChannelContext channelContext, boolean isConnected, boolean isReconnect) throws Exception {
         if (isConnected) {
             logger.info("P2pServerListener.java : 连接新节点: {}", channelContext.getClientNode());
-            // TODO：同步区块
         }
     }
 

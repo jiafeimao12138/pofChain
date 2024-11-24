@@ -1,10 +1,12 @@
 package com.example;
 
 import com.example.base.entities.Block;
+import com.example.base.entities.BlockHeader;
+import com.example.base.store.BlockPrefix;
 import com.example.base.store.RocksDBStore;
 import com.example.base.utils.CmdArgsParser;
 import com.example.base.utils.SerializeUtils;
-import com.example.web.service.BlockService;
+import com.example.web.service.MiningService;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,20 +75,22 @@ public class PofRunner {
     public Block generateGenesisBlock() {
 
         Block genesisBlock = new Block();
-        genesisBlock.setHashPreBlock("00000000000000");
-        genesisBlock.setNBits(0x1d00ffff);
-        genesisBlock.setNNonce(2083236893);
+        BlockHeader genesisBlockHeader = new BlockHeader();
+        genesisBlockHeader.setHashPreBlock("00000000000000");
+        genesisBlockHeader.setNBits(0x1d00ffff);
+        genesisBlockHeader.setNNonce(2083236893);
+        genesisBlockHeader.setNVersion(1);
+        genesisBlockHeader.setHashMerkleRoot("");
+        genesisBlockHeader.setHeight(0);
+        genesisBlockHeader.setNTime(System.currentTimeMillis());
+        genesisBlock.setBlockHeader(genesisBlockHeader);
         genesisBlock.setTransactions(new ArrayList<>());
-        genesisBlock.setNVersion(1);
-        genesisBlock.setHashMerkleRoot("");
-        genesisBlock.setHeight(1);
-        genesisBlock.setNTime(System.currentTimeMillis());
 
-        dbStore.put(BlockService.BLOCK_PREFIX + genesisBlock.getHeight(), genesisBlock);
-        dbStore.put(BlockService.HEIGHT, genesisBlock.getHeight());
+        dbStore.put(BlockPrefix.BLOCK_HEIGHT_PREFIX.getPrefix() + genesisBlock.getBlockHeader().getHeight(), genesisBlock);
+        dbStore.put(BlockPrefix.HEIGHT.getPrefix(), genesisBlock.getBlockHeader().getHeight());
         dbStore.close();
 
-        logger.info("Successfully create genesis block and store in database. Hash is {}.", genesisBlock.GetHash());
+        logger.info("创世区块创建成功，Hash：{}.", genesisBlock.getHash());
         return genesisBlock;
     }
 

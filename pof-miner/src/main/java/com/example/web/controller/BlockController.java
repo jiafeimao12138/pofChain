@@ -1,12 +1,9 @@
 package com.example.web.controller;
 
-import com.example.miner.Miner;
-import com.example.miner.chain.Chain;
-import com.example.net.conf.MinerConfig;
-import com.example.web.service.BlockService;
-import com.example.web.service.BlockServiceImpl;
+import com.example.web.service.ChainService;
+import com.example.web.service.MiningService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -15,15 +12,28 @@ import org.springframework.web.bind.annotation.RestController;
  * @date 2024年09月16日 20:32
  */
 @RestController
+@RequiredArgsConstructor
 public class BlockController {
-    @Autowired
-    BlockService blockService;
+
+    private final MiningService miningService;
+    private final ChainService chainService;
 
     @RequestMapping("startmining")
     public void mine() {
-        if (blockService.AFLswitchRoot()){
-            blockService.startMining();
+        if (miningService.AFLswitchRoot()){
+            miningService.startMining();
         }
+    }
+
+    @RequestMapping("getChainHeight")
+    public long getChainHeight() {
+        long mainChainHeight = chainService.getMainChainHeight();
+        return mainChainHeight;
+    }
+
+    @RequestMapping("syncBlockChain")
+    public void syncBlockChain() {
+        chainService.syncBlockChain(0);
     }
 
     @RequestMapping("test")

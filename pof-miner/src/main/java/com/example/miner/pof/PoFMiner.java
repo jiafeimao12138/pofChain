@@ -2,8 +2,6 @@ package com.example.miner.pof;
 
 import com.example.base.entities.Block;
 import com.example.miner.Miner;
-import com.example.web.service.BlockService;
-import lombok.NoArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**

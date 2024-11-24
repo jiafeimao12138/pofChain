@@ -7192,14 +7192,14 @@ static void handle_timeout(int sig) {
 //          }
           // kill(child_pid, SIGCONT);
         }
-        printf("this window end");
+        printf("this window end, num=%d\n", testfile_id);
 
 
 //     重新设置定时器
        timer.it_value.tv_sec = 1;      
        timer.it_value.tv_usec = 0;
        setitimer(ITIMER_REAL, &timer, NULL);
-       printf("new window start");
+       printf("new window start\n");
     
   }
   

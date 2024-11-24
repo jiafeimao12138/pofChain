@@ -2,7 +2,6 @@ package com.example.miner;
 
 
 import com.example.base.entities.Block;
-import com.example.web.service.BlockService;
 
 /**
  * @author jiafeimao

@@ -2,17 +2,17 @@ package com.example.miner.pof;
 
 import com.example.base.Exception.WindowFileException;
 import com.example.base.entities.Block;
+import com.example.base.entities.BlockHeader;
 import com.example.base.entities.Payload;
 import com.example.base.entities.Transaction;
+import com.example.base.store.BlockPrefix;
 import com.example.base.store.RocksDBStore;
 import com.example.base.utils.WindowFileUtils;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewBlockEvent;
-import com.example.web.service.BlockService;
-import org.apache.commons.lang3.tuple.Triple;
+import com.example.web.service.MiningService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -40,22 +40,15 @@ public class ProofOfFuzzing {
         this.preBlock = preBlock;
     }
 
-//   TODO: 动态更新hash区间
-
 
 //    运行工作量证明，这里执行AFL脚本
     public void run() {
-//        while (true) {
             try {
-////                String shellCommand1 = "./switchRoot.sh";
-////                String shellCommand2 = "s";
-//                String shellCommand3 = "sh /home/wj/pofChain/afl_exec.sh";
                 String shellCommand = "cd AFL && afl-fuzz -i fuzz_in/ -o fuzz_out ./afl_testfiles/objfiles/string_length";
                 executeCommand(shellCommand);
             } catch (Exception e) {
                 e.printStackTrace();
             }
-//        }
     }
 
     public void executeCommand(String command) {
@@ -68,7 +61,6 @@ public class ProofOfFuzzing {
 
         try {
             Process process = processBuilder.start();
-
             // 获取输出
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
@@ -88,20 +80,19 @@ public class ProofOfFuzzing {
                     }
                     Block newBlock = computeWindowHash(preBlock, transactions, triples);
                     logger.info("挖矿成功，新区块高度为{}，hash={}，前一个区块hash={}",
-                            newBlock.getHeight(), newBlock.GetHash(),newBlock.getHashPreBlock());
+                            newBlock.getBlockHeader().getHeight(), newBlock.getHash(),newBlock.getBlockHeader().getHashPreBlock());
                     // 广播
                     ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
-                    logger.info("广播新Block,hash={}", newBlock.GetHash());
+                    logger.info("广播新Block,hash={}", newBlock.getHash());
 
-                    if (!rocksDBStore.put(BlockService.BLOCK_PREFIX + newBlock.getHeight(), newBlock)) {
+                    if (!rocksDBStore.put(BlockPrefix.BLOCK_HEIGHT_PREFIX.getPrefix() + newBlock.getBlockHeader().getHeight(), newBlock)) {
                         logger.info("存入新区块失败");
                     }
-                    if (!rocksDBStore.put(BlockService.HEIGHT, newBlock.getHeight())){
+                    if (!rocksDBStore.put(BlockPrefix.HEIGHT.getPrefix(), newBlock.getBlockHeader().getHeight())){
                         logger.info("存入最新高度失败");
                     }
                     rocksDBStore.close();
-                    logger.info("存入新区块，高度为{}，hash={}", newBlock.getHeight(), newBlock.GetHash());
-
+                    logger.info("存入新区块，高度为{}，hash={}", newBlock.getBlockHeader().getHeight(), newBlock.getHash());
                 }
             }
 
@@ -114,8 +105,6 @@ public class ProofOfFuzzing {
         }
     }
 
-
-
 /*
 *   sha256(preBlock, nonce, transactions, List<input, path, is_craash>, timestamp)
 *   返回执行窗口的hash值
@@ -126,38 +115,23 @@ public class ProofOfFuzzing {
         Random random = new Random();
         long nonce = random.nextInt();
         long timestamp = System.currentTimeMillis();
-        long height = preBlock.getHeight() + 1;
+        long height = preBlock.getBlockHeader().getHeight() + 1;
 
         Block newBlock = new Block();
-        newBlock.setNVersion(1);
+        BlockHeader blockHeader = new BlockHeader();
+        blockHeader.setNVersion(1);
+        blockHeader.setHashPreBlock(preBlock.getHash());
+        blockHeader.setNTime(timestamp);
+        blockHeader.setNNonce(nonce);
+        blockHeader.setHeight(height);
+        blockHeader.setTriples(triples);
+        blockHeader.setHashMerkleRoot("");
+        newBlock.setBlockHeader(blockHeader);
         newBlock.setTransactions(transactionList);
-        newBlock.setHashPreBlock(preBlock.GetHash());
-        newBlock.setNTime(timestamp);
-        newBlock.setNNonce(nonce);
-        newBlock.setHeight(height);
-        newBlock.setTriples(triples);
-        newBlock.setHashMerkleRoot("");
-        String sha256 = newBlock.GetHash();
+
+        String sha256 = newBlock.getHash();
         System.out.println("SHA256: " + sha256);
         return newBlock;
-    }
-
-    public void executeShellScript(String shellCommand) throws IOException, InterruptedException {
-        logger.info("start to run afl shell-----------------------");
-        Process process = Runtime.getRuntime().exec(shellCommand);
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String line;
-        int num = 1;
-        //一直监控输出
-        while ((line = reader.readLine()) != null) {
-            System.out.println(line);
-            //        需要放在循环里，一旦监测到new window start，即表示上个窗口执行结束了，并且也处理完了，接下来轮到计算hash
-
-        }
-        int exitCode = process.waitFor();
-        System.out.println("Script exited with code: " + exitCode);
-        reader.close();
     }
 
 }
