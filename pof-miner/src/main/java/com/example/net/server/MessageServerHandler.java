@@ -56,11 +56,11 @@ public class MessageServerHandler {
     //处理接收到的新区块
     public synchronized MessagePacket receiveNewBlock(byte[] msgBody) {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
-        if (!validationService.checkBlock(newBlock)) {
-            logger.info("校验新区块失败");
+        if (!validationService.processNewBlock(newBlock)) {
+            logger.info("校验新区块失败, hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
             return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, false), "校验新区块失败");
         }
-        logger.info("校验新区块成功");
+        logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
         return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, true), "成功");
 
     }

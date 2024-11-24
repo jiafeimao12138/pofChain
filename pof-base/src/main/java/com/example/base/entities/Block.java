@@ -21,7 +21,6 @@ public class Block implements Serializable {
 //    header
     private BlockHeader blockHeader;
     private List<Transaction> transactions = new ArrayList<>();
-    private String hash;
 
     public Block() {
     }
@@ -31,11 +30,10 @@ public class Block implements Serializable {
                  ) {
         this.blockHeader = blockHeader;
         this.transactions = transactions;
-        this.hash = GetHash();
     }
 
     public String getHash() {
-        return hash;
+        return GetHash();
     }
 
     private String GetHash() {

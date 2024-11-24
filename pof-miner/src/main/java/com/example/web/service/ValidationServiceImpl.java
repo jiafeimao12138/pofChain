@@ -40,9 +40,9 @@ public class ValidationServiceImpl implements ValidationService{
     @Override
     public boolean checkBlock(Block block) {
         long height = block.getBlockHeader().getHeight();
-        // 如果这个高度的区块已经存在了
+        // 如果这个高度的区块已经存在了, 忽略
         if (chainService.getBlockByHeight(height) != null){
-            return false;
+            return true;
         } else {
             // 校验这个新区块
             // 如果该区块高度过高，舍弃

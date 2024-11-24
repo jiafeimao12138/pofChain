@@ -76,6 +76,11 @@ public class ChainServiceImpl implements ChainService{
     @Override
     public long getMainChainHeight() {
         ApplicationContextProvider.publishEvent(new GetHeightEvent(0));
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
         Optional<Object> o = rocksDBStore.get(BlockPrefix.CHAIN_HEIGHT.getPrefix());
         if (o.isPresent()) {
             long height = (long) o.get();

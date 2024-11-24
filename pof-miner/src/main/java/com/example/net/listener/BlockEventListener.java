@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.CountDownLatch;
+
 @Component
 public class BlockEventListener {
     private static final Logger logger = LoggerFactory.getLogger(BlockEventListener.class);

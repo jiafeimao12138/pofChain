@@ -59,12 +59,13 @@ public class PofRunner {
                 genPropertiesFile(parser);
                 break;
 
-            case "mine" :
+            case "miner" :
                 logger.info("矿工节点加入中。。。。。");
                 if (repo_dir.exists()) {
                     throw new RuntimeException(String.format("A miner repo is already initialized in '%s'", repo_dir));
                 }
                 dbStore = new RocksDBStore(repo);
+                generateGenesisBlock();
                 genPropertiesFile(parser);
                 dbStore.close();
                 break;
@@ -82,7 +83,7 @@ public class PofRunner {
         genesisBlockHeader.setNVersion(1);
         genesisBlockHeader.setHashMerkleRoot("");
         genesisBlockHeader.setHeight(0);
-        genesisBlockHeader.setNTime(System.currentTimeMillis());
+        genesisBlockHeader.setNTime(1732436151);
         genesisBlock.setBlockHeader(genesisBlockHeader);
         genesisBlock.setTransactions(new ArrayList<>());
 

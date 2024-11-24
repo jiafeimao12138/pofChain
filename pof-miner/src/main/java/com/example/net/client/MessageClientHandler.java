@@ -35,7 +35,7 @@ public class MessageClientHandler {
             ApplicationContextProvider.publishEvent(new GetBlockByHeightEvent(block.getBlockHeader().getHeight() + 1));
             return;
         }
-        // 如果本地区块链中不存在该区块
+        // 如果本地区块链中不存在该区块, 则进行合法性校验
         if (validationService.checkBlock(block)) {
             if (validationService.storeBlock(block)) {
                 // 已经获取了最新的区块，停止获取
@@ -44,6 +44,7 @@ public class MessageClientHandler {
                     return;
                 }
                 ApplicationContextProvider.publishEvent(new GetBlockByHeightEvent(block.getBlockHeader().getHeight() + 1));
+                logger.info("请求同步下一个高度的区块，{}", block.getBlockHeader().getHeight() + 1);
             }
             // @TODO：存入失败处理
         } else {
@@ -58,7 +59,7 @@ public class MessageClientHandler {
         }
         long height = (long) packetBody.getItem();
         if (validationService.storeChainHeight(height)) {
-            logger.info("更新主链当前高度");
+            logger.info("更新主链当前高度, {}", height);
         }
     }
 

@@ -1,11 +1,15 @@
 package com.example.web.controller;
 
+import com.example.base.entities.Block;
 import com.example.web.service.ChainService;
 import com.example.web.service.MiningService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author jiafeimao
@@ -31,9 +35,15 @@ public class BlockController {
         return mainChainHeight;
     }
 
+    @RequestMapping("getLocalChainLatestBlock")
+    public String getLocalChainLatestBlock() {
+        Block localLatestBlock = chainService.getLocalLatestBlock();
+        return "localLatestBlock: hash=" + localLatestBlock.getHash() + ",height=" + localLatestBlock.getBlockHeader().getHeight();
+    }
+
     @RequestMapping("syncBlockChain")
     public void syncBlockChain() {
-        chainService.syncBlockChain(0);
+        chainService.syncBlockChain(1);
     }
 
     @RequestMapping("test")

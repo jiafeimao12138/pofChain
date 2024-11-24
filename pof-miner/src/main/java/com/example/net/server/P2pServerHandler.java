@@ -55,7 +55,8 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 responsePacket = serverHandler.receiveGetBlockByHeight(msgBody);
                 break;
             case MessagePacketType.REQ_HEIGHT:
-                serverHandler.receiveHeightReq(msgBody);
+                logger.info("处理主链最新高度请求");
+                responsePacket = serverHandler.receiveHeightReq(msgBody);
                 break;
         }
         if (responsePacket != null){
