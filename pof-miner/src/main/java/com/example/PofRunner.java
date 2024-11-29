@@ -103,13 +103,18 @@ public class PofRunner {
         properties.setProperty("server.port", parser.getOption("api.port", "8001"));
         properties.setProperty("pof.repo", repo);
 //		默认可挖矿
-        properties.setProperty("pof.enable-mining", parser.getOption("enable-mining", "false"));
+        properties.setProperty("pof.enable-mining", parser.getOption("enable-mining", "true"));
         properties.setProperty("p2p.address", parser.getOption("p2p.addr", "127.0.0.1"));
         properties.setProperty("p2p.port", parser.getOption("p2p.port", "2345"));
 
         // load common properties
         properties.setProperty("genesis.address", "127.0.0.1");
         properties.setProperty("genesis.port", "2345");
+        // 待测程序队列
+        String programDirectory = "/home/wj/pofChain/programQueue/";
+        properties.setProperty("targetProgramQueueDir", programDirectory);
+        File directory = new File(programDirectory);
+        directory.mkdirs();
 
         // disable tio logs
         properties.setProperty("logging.level.org.tio.server", "off");

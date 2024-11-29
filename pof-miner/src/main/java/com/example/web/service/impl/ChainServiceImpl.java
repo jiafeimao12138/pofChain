@@ -1,19 +1,19 @@
-package com.example.web.service;
+package com.example.web.service.impl;
 
 import com.example.base.entities.Block;
 import com.example.base.store.BlockPrefix;
 import com.example.base.store.DBStore;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.GetBlockByHeightEvent;
-import com.example.net.events.GetBlocksEvent;
 import com.example.net.events.GetHeightEvent;
+import com.example.web.service.ChainService;
 import org.springframework.stereotype.Service;
 import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Service
-public class ChainServiceImpl implements ChainService{
+public class ChainServiceImpl implements ChainService {
 
     private final DBStore rocksDBStore;
 

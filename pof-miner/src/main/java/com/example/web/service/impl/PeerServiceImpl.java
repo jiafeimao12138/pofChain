@@ -1,11 +1,12 @@
-package com.example.web.service;
+package com.example.web.service.impl;
 
 import com.example.base.entities.Peer;
 import com.example.base.store.DBStore;
+import com.example.web.service.PeerService;
 import org.springframework.stereotype.Service;
 
 @Service
-public class PeerServiceImpl implements PeerService{
+public class PeerServiceImpl implements PeerService {
 
     private final DBStore dbStore;
 

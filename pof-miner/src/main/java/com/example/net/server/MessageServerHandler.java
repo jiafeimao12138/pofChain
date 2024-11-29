@@ -2,8 +2,10 @@ package com.example.net.server;
 
 import com.example.base.entities.Block;
 import com.example.base.entities.Message;
+import com.example.base.entities.NewPath;
 import com.example.base.entities.Peer;
 import com.example.base.utils.SerializeUtils;
+import com.example.fuzzed.ProgramService;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
 import com.example.net.base.PacketBody;
@@ -21,6 +23,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.tio.core.Node;
 
+import java.io.File;
+import java.util.LinkedHashMap;
+import java.util.List;
+
 // 处理其他node发送的message request
 @Component
 @RequiredArgsConstructor
@@ -31,6 +37,7 @@ public class MessageServerHandler {
     private final ValidationService validationService;
     private final ChainService chainService;
     private final P2pClient p2pClient;
+    private final ProgramService programService;
 
 
     public synchronized MessagePacket helloMessage(byte[] msgBody) {
@@ -93,6 +100,19 @@ public class MessageServerHandler {
     public synchronized MessagePacket receiveHeightReq(byte[] msgBody) {
         long height = chainService.getLocalLatestBlock().getBlockHeader().getHeight();
         return buildPacket(MessagePacketType.RES_HEIGHT, new PacketBody(height, PacketMsgType.SUCEESS), "成功");
+    }
+
+    public synchronized void receiveFile(byte[] msgBody, String path, String name) {
+        logger.info("收到file，长度为{}", msgBody.length);
+        programService.byteToFile(msgBody, path, name);
+    }
+
+    public synchronized void receiveNewPathRank(byte[] msgBody) {
+        logger.info("收到本轮新路径排名");
+        LinkedHashMap<String, List<NewPath>> rank =
+                (LinkedHashMap<String, List<NewPath>>) SerializeUtils.unSerialize(msgBody);
+        rank.entrySet().stream().forEach(stringListEntry ->
+                System.out.println(stringListEntry.getKey() + ":" + stringListEntry.getValue()));
     }
 
     private MessagePacket buildPacket(byte type, PacketBody packetBody, String message)

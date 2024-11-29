@@ -25,4 +25,12 @@ public interface MessagePacketType
     // 请求当前主链最大高度
     byte REQ_HEIGHT = 6;
     byte RES_HEIGHT = -6;
+    // supplier发布待测程序
+    byte PUBLISH_FILE = 7;
+    byte RECV_FILE = -7;
+    // 请求待测程序队列
+    byte REQ_PROG_QUEUE = 8;
+    byte RES_PROG_QUEUE = -8;
+    // supplier广播新路径排名
+    byte NEW_PATH_RANK = 9;
 }

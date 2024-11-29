@@ -5,6 +5,7 @@ import com.example.base.utils.SerializeUtils;
 import com.example.net.base.BaseTioHandler;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.tio.core.ChannelContext;
 import org.tio.core.Tio;
@@ -19,6 +20,10 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
     private static final Logger logger = LoggerFactory.getLogger(P2pServerHandler.class);
 
     private final MessageServerHandler serverHandler;
+
+    @Value("${targetProgramQueueDir}")
+    private String targetProgramQueueDir;
+
     public P2pServerHandler(MessageServerHandler serverHandler) {
         this.serverHandler = serverHandler;
     }
@@ -57,6 +62,14 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
             case MessagePacketType.REQ_HEIGHT:
                 logger.info("处理主链最新高度请求");
                 responsePacket = serverHandler.receiveHeightReq(msgBody);
+                break;
+            case MessagePacketType.PUBLISH_FILE:
+                logger.info("收到新待测程序");
+                serverHandler.receiveFile(msgBody, targetProgramQueueDir, "program_");
+                break;
+            case MessagePacketType.NEW_PATH_RANK:
+                // @TODO 实时推送给前端
+                serverHandler.receiveNewPathRank(msgBody);
                 break;
         }
         if (responsePacket != null){

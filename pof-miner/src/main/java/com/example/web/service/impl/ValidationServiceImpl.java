@@ -1,8 +1,10 @@
-package com.example.web.service;
+package com.example.web.service.impl;
 
 import com.example.base.entities.Block;
 import com.example.base.store.BlockPrefix;
 import com.example.base.store.DBStore;
+import com.example.web.service.ChainService;
+import com.example.web.service.ValidationService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -14,7 +16,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Service
 @RequiredArgsConstructor
-public class ValidationServiceImpl implements ValidationService{
+public class ValidationServiceImpl implements ValidationService {
 
     private static final Logger logger = LoggerFactory.getLogger(ValidationServiceImpl.class);
     private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();

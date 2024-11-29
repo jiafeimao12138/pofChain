@@ -6,7 +6,6 @@ import com.example.net.base.PacketBody;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.GetBlockByHeightEvent;
 import com.example.web.service.ChainService;
-import com.example.web.service.MiningServiceImpl;
 import com.example.web.service.ValidationService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;

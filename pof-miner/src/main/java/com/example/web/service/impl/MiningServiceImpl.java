@@ -1,19 +1,20 @@
-package com.example.web.service;
+package com.example.web.service.impl;
 
 
 import com.example.base.Exception.WindowFileException;
-import com.example.base.entities.Block;
-import com.example.base.entities.BlockHeader;
-import com.example.base.entities.Payload;
-import com.example.base.entities.Transaction;
+import com.example.base.entities.*;
 import com.example.base.store.BlockPrefix;
 import com.example.base.store.DBStore;
 import com.example.base.utils.WindowFileUtils;
+import com.example.fuzzed.ProgramService;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewBlockEvent;
+import com.example.web.service.ChainService;
+import com.example.web.service.MiningService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -27,6 +28,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.locks.Lock;
@@ -45,6 +47,8 @@ public class MiningServiceImpl implements MiningService {
 
     private final DBStore rocksDBStore;
     private final ChainService chainService;
+    private final ProgramService programService;
+    private final Payloads payloads;
 
     private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private final Lock readLock = rwl.readLock();
@@ -52,6 +56,9 @@ public class MiningServiceImpl implements MiningService {
     private int hitCount = 0;
     long endWindow = 0;
     long lastWindowEnd = System.currentTimeMillis();
+
+    @Value("${targetProgramQueueDir}")
+    private String targetProgramQueueDir;
 
     Path path = Paths.get("output.txt");
     //TODO: 每挖出x个区块更改一次head，类比bitcoin
@@ -66,14 +73,15 @@ public class MiningServiceImpl implements MiningService {
 //                miner.mineAndFuzzing(preBlock);
 //                ProofOfFuzzing proofOfFuzzing = ProofOfFuzzing.newProofOfFuzzing(preBlock);
 //                proofOfFuzzing.run();
-                executeCommand();
+                Path tobeFuzzedPath = programService.chooseTargetProgram(targetProgramQueueDir);
+                executeCommand(tobeFuzzedPath);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }).start();
     }
 
-    public void executeCommand() {
+    public void executeCommand(Path targetProgram) {
         //区间
         List<BigInteger> interval = generateRandomHashHead(6);
         BigInteger head = interval.get(0);
@@ -88,9 +96,7 @@ public class MiningServiceImpl implements MiningService {
         ProcessBuilder processBuilder = new ProcessBuilder();
 //        指定工作目录
         processBuilder.directory(new java.io.File("/home/wj/pofChain/AFL"));
-
-        // Linux command
-        processBuilder.command("afl-fuzz", "-i", "fuzz_in/", "-o", "fuzz_out", "./afl_testfiles/objfiles/string_length");
+        processBuilder.command("afl-fuzz", "-i", "fuzz_in/", "-o", "fuzz_out", targetProgram.toString());
 
         try {
             Process process = processBuilder.start();
@@ -105,7 +111,7 @@ public class MiningServiceImpl implements MiningService {
                     num = Integer.parseInt(nums[1]);
                     List<Transaction> transactions = new ArrayList<>();
                     try {
-                        List<Payload> triples;
+                        payloads.setPayloads();
                         triples = WindowFileUtils.windowFilesToTriple(
                                 "/home/wj/pofChain/AFL/afl_testfiles/window_testcases/testcase_" + num,
                                 "/home/wj/pofChain/AFL/afl_testfiles/window_paths/testfile_" + num);
@@ -230,6 +236,12 @@ public class MiningServiceImpl implements MiningService {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public List<Payload> getPayloads() {
+        List<Payload> payloads1 = payloads.getPayloads();
+        return Collections.emptyList();
     }
 
     public static boolean deleteFile(String fileName) {
