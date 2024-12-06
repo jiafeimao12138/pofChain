@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.tio.client.intf.TioClientHandler;
 import org.tio.core.ChannelContext;
+import org.tio.core.Node;
 import org.tio.core.intf.Packet;
 
 @Component
@@ -36,6 +37,9 @@ public class P2pClientHandler extends BaseTioHandler implements TioClientHandler
         }
         PacketBody packetBody;
         switch (type) {
+            case MessagePacketType.HELLO_MESSAGE:
+                logger.info("收到server握手消息:{}，来自：{}", SerializeUtils.unSerialize(body), channelContext);
+                break;
             case MessagePacketType.RES_NEW_BLOCK:
                 packetBody = (PacketBody) SerializeUtils.unSerialize(body);
                 if (packetBody.isSuccess()) {

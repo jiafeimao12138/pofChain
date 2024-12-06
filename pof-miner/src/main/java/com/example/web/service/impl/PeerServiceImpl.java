@@ -4,6 +4,7 @@ import com.example.base.entities.Peer;
 import com.example.base.store.DBStore;
 import com.example.web.service.PeerService;
 import org.springframework.stereotype.Service;
+import org.tio.client.ClientChannelContext;
 
 @Service
 public class PeerServiceImpl implements PeerService {
@@ -17,6 +18,17 @@ public class PeerServiceImpl implements PeerService {
     @Override
     public boolean hasPeer(Peer peer) {
         return dbStore.get(PEER_PREFIX + peer.toString()).isPresent();
+    }
+
+    @Override
+    public boolean addSupplierPeer(Peer peer, ClientChannelContext channelContext) {
+        return dbStore.put(PEER_PREFIX + peer.toString(), peer) &
+                dbStore.put(SUPPLIER_PREFIX + peer.toString(), peer);
+    }
+
+    @Override
+    public boolean removeSupplier(Peer peer) {
+        return dbStore.delete(SUPPLIER_PREFIX + peer.toString());
     }
 
     @Override

@@ -1,11 +1,17 @@
 package com.example.net.events;
 
 import org.springframework.context.ApplicationEvent;
+import org.tio.core.Node;
 
-import java.io.File;
 
 public class NewTargetProgramEvent extends ApplicationEvent {
-    public NewTargetProgramEvent(byte[] fileBytes) {
+    private Node node;
+    public NewTargetProgramEvent(byte[] fileBytes, Node node) {
         super(fileBytes);
+        this.node = node;
+    }
+
+    public Node getNode() {
+        return node;
     }
 }

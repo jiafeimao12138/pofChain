@@ -27,13 +27,13 @@ public class NewMessageListener {
         this.p2pClient = p2pClient;
     }
 
+
     //新消息事件触发
     @EventListener(NewMsgEvent.class)
     public void onNewMsg(NewMsgEvent event) {
         Message message = (Message) event.getSource();
-        logger.info("开始广播新消息: " + message);
         MessagePacket messagePacket = new MessagePacket();
-        messagePacket.setType(MessagePacketType.REQ_NEW_MESSAGE);
+        messagePacket.setType(MessagePacketType.HELLO_MESSAGE);
         messagePacket.setBody(SerializeUtils.serialize(message));
         p2pClient.sendToGroup(messagePacket);
     }
@@ -44,6 +44,7 @@ public class NewMessageListener {
         MessagePacket messagePacket = new MessagePacket();
         messagePacket.setType(MessagePacketType.PUBLISH_FILE);
         messagePacket.setBody(fileBytes);
+        messagePacket.setNode(SerializeUtils.serialize(event.getNode()));
         p2pClient.sendToGroup(messagePacket);
     }
 

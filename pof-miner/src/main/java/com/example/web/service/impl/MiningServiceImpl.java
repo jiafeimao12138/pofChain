@@ -7,6 +7,7 @@ import com.example.base.store.BlockPrefix;
 import com.example.base.store.DBStore;
 import com.example.base.utils.WindowFileUtils;
 import com.example.fuzzed.ProgramService;
+import com.example.net.client.P2pClient;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewBlockEvent;
 import com.example.web.service.ChainService;
@@ -48,7 +49,10 @@ public class MiningServiceImpl implements MiningService {
     private final DBStore rocksDBStore;
     private final ChainService chainService;
     private final ProgramService programService;
+    private final P2pClient p2pClient;
+    // 存储中间值
     private final Payloads payloads;
+    private List<Payload> triples;
 
     private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private final Lock readLock = rwl.readLock();
@@ -111,10 +115,11 @@ public class MiningServiceImpl implements MiningService {
                     num = Integer.parseInt(nums[1]);
                     List<Transaction> transactions = new ArrayList<>();
                     try {
-                        payloads.setPayloads();
                         triples = WindowFileUtils.windowFilesToTriple(
                                 "/home/wj/pofChain/AFL/afl_testfiles/window_testcases/testcase_" + num,
                                 "/home/wj/pofChain/AFL/afl_testfiles/window_paths/testfile_" + num);
+                        // 向中间值添加本轮挖矿的path信息，等到新区块成功挖出后再置空
+                        payloads.addPayloads(triples);
                         logger.info("本次处理文件num={}", num);
                         // 每20个文件清理一次
                         if(num % 20 == 1) {
@@ -241,7 +246,7 @@ public class MiningServiceImpl implements MiningService {
     @Override
     public List<Payload> getPayloads() {
         List<Payload> payloads1 = payloads.getPayloads();
-        return Collections.emptyList();
+        return payloads1;
     }
 
     public static boolean deleteFile(String fileName) {

@@ -9,12 +9,10 @@ import javax.annotation.PostConstruct;
 import java.io.IOException;
 
 // 启动 p2pserver
-
 @Component
 public class P2pServer {
     private final TioServerConfig tioServerConfig;
     private final P2pNetConfig p2pNetConfig;
-
 
     public P2pServer(P2pNetConfig p2pNetConfig, P2pServerHandler p2pServerHandler, P2pServerListener p2pServerListener) {
         TioServerConfig serverConfig = new TioServerConfig(P2pNetConfig.SERVER_NAME, p2pServerHandler, p2pServerListener);

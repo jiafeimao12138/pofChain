@@ -11,7 +11,6 @@ public class MessageServiceImpl implements MessageService {
     @Override
     public boolean publishMsg(Message message) {
         ApplicationContextProvider.publishEvent(new NewMsgEvent(new Message("","","hello")));
-
         return false;
     }
 }

@@ -42,22 +42,21 @@ public class MessageServerHandler {
 
     public synchronized MessagePacket helloMessage(byte[] msgBody) {
         Message message = (Message) SerializeUtils.unSerialize(msgBody);
-        logger.info("receive a new message， {}", message);
         PacketBody packetBody = new PacketBody(message, true);
-        return buildPacket(MessagePacketType.HELLO_MESSAGE, packetBody, null);
+        return null;
     }
 
-    public synchronized MessagePacket newPeerConnect(byte[] msgBody) throws Exception {
+    public synchronized void newPeerConnect(byte[] msgBody) throws Exception {
         Peer peer = (Peer) SerializeUtils.unSerialize(msgBody);
         // 如果该节点之前没有连过，将它添加到数据库中
         if (!peerService.hasPeer(peer)) {
             peerService.addPeer(peer);
         }
+        // TODO：接收到hello消息的回复才认为连接成功
         if (p2pClient.connect(new Node(peer.getIp(),peer.getPort()))) {
             logger.info("已连接新节点：{}", peer);
             ApplicationContextProvider.publishEvent(new NewPeerEvent(peer));
         }
-        return null;
     }
 
     //处理接收到的新区块

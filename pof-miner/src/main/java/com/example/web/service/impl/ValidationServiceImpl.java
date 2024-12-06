@@ -1,6 +1,8 @@
 package com.example.web.service.impl;
 
 import com.example.base.entities.Block;
+import com.example.base.entities.Payload;
+import com.example.base.entities.Payloads;
 import com.example.base.store.BlockPrefix;
 import com.example.base.store.DBStore;
 import com.example.web.service.ChainService;
@@ -11,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -23,6 +26,8 @@ public class ValidationServiceImpl implements ValidationService {
     private final Lock writeLock = rwl.writeLock();
     private final ChainService chainService;
     private final DBStore dbStore;
+    private final Payloads payloads;
+
     private final int MIN_BLOCKS_TO_KEEP = 10;
 
     // 处理接收到的新区块
@@ -31,6 +36,11 @@ public class ValidationServiceImpl implements ValidationService {
         boolean ret = checkBlock(block);
         if (ret) {
             storeBlock(block);
+            // 存储新区块时，需要汇报该Fuzzer自己本轮挖掘出的path信息
+            List<Payload> pathsInfo = payloads.getPayloads();
+            // 发送给supplier
+
+            payloads.setNull();
             return true;
         } else {
             return false;

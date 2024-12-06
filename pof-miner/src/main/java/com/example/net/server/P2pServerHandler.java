@@ -8,6 +8,7 @@ import com.example.net.base.MessagePacketType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.tio.core.ChannelContext;
+import org.tio.core.Node;
 import org.tio.core.Tio;
 import org.tio.core.intf.Packet;
 import org.tio.server.intf.TioServerHandler;
@@ -41,11 +42,11 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
         MessagePacket responsePacket = null;
         switch (msgType){
             case MessagePacketType.HELLO_MESSAGE:
-                logger.info("hello message: {}", SerializeUtils.unSerialize(msgBody));
+                logger.info("收到client握手消息: {}", SerializeUtils.unSerialize(msgBody));
                 responsePacket = serverHandler.helloMessage(msgBody);
                 break;
             case MessagePacketType.REQ_NEW_PEER:
-                logger.info("连接新节点");
+                logger.info("收到REQ_NEW_PEER消息");
                 serverHandler.newPeerConnect(msgBody);
                 break;
             case MessagePacketType.REQ_NEW_BLOCK:
@@ -72,6 +73,7 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 serverHandler.receiveNewPathRank(msgBody);
                 break;
         }
+        logger.info("server回复client: channelContext:{}", channelContext);
         if (responsePacket != null){
             Tio.send(channelContext, responsePacket);
         }

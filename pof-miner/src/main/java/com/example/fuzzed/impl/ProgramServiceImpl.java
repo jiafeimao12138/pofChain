@@ -1,11 +1,15 @@
 package com.example.fuzzed.impl;
 
 import com.example.fuzzed.ProgramService;
+import com.example.net.client.P2pClient;
 import com.example.net.conf.ApplicationContextProvider;
+import com.example.net.conf.P2pNetConfig;
 import com.example.net.events.NewTargetProgramEvent;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.tio.core.Node;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -20,6 +24,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 public class ProgramServiceImpl implements ProgramService {
 
     private static final Logger logger = LoggerFactory.getLogger(ProgramServiceImpl.class);
+
+    private P2pNetConfig p2pNetConfig;
 
     // 将待测程序转换为目标可执行文件
     @Override
@@ -37,8 +43,9 @@ public class ProgramServiceImpl implements ProgramService {
             File file = new File(objPath);
             // 读取文件的字节
             byte[] fileBytes = Files.readAllBytes(file.toPath());
-            // 广播该目标可执行文件
-            ApplicationContextProvider.publishEvent(new NewTargetProgramEvent(fileBytes));
+            // 广播该目标可执行文件和ip
+            ApplicationContextProvider.publishEvent(new NewTargetProgramEvent(fileBytes,
+                    new Node(p2pNetConfig.getServerAddress(), p2pNetConfig.getServerPort())));
             logger.info("已广播待测可执行文件：{}, 长度:{}", file.getName(), fileBytes.length);
         } catch (IOException e) {
             throw new RuntimeException(e);

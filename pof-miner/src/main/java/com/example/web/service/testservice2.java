@@ -13,6 +13,9 @@ public class testservice2 {
     private final Payloads payloads;
 
     public List<Payload> getPayloads() {
+        List<Payload> payloads1 = payloads.getPayloads();
+        System.out.println("getPayloads: " + payloads1);
+        payloads.setNull();
         return payloads.getPayloads();
     }
 }
