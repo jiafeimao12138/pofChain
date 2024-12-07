@@ -3,15 +3,23 @@ package com.example.web.service.impl;
 import com.example.base.entities.Block;
 import com.example.base.entities.Payload;
 import com.example.base.entities.Payloads;
+import com.example.base.entities.Peer;
 import com.example.base.store.BlockPrefix;
 import com.example.base.store.DBStore;
+import com.example.base.utils.SerializeUtils;
+import com.example.net.base.MessagePacket;
+import com.example.net.base.MessagePacketType;
+import com.example.net.client.P2pClient;
 import com.example.web.service.ChainService;
+import com.example.web.service.PeerService;
 import com.example.web.service.ValidationService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.tio.client.ClientChannelContext;
+import org.tio.core.Node;
 
 import java.util.List;
 import java.util.concurrent.locks.Lock;
@@ -27,19 +35,42 @@ public class ValidationServiceImpl implements ValidationService {
     private final ChainService chainService;
     private final DBStore dbStore;
     private final Payloads payloads;
+    private final PeerService peerService;
+    private final P2pClient p2pClient;
 
     private final int MIN_BLOCKS_TO_KEEP = 10;
 
-    // 处理接收到的新区块
     @Override
     public boolean processNewBlock(Block block) {
+        return false;
+    }
+
+    // 处理接收到的新区块
+    @Override
+    public boolean processNewMinedBlock(Block block) {
         boolean ret = checkBlock(block);
+        // 经过校验后进行后续步骤
         if (ret) {
             storeBlock(block);
             // 存储新区块时，需要汇报该Fuzzer自己本轮挖掘出的path信息
             List<Payload> pathsInfo = payloads.getPayloads();
-            // 发送给supplier
+            MessagePacket messagePacket = new MessagePacket();
+            messagePacket.setType(MessagePacketType.PAYLOADS_SUBMIT);
+            messagePacket.setBody(SerializeUtils.serialize(pathsInfo));
 
+            // 发送给supplier
+            Peer supplier = peerService.getSupplierPeer();
+            List<ClientChannelContext> channelContextList = p2pClient.getChannelContextList();
+            // 在维护的列表中查找supplier，如果没查到，重新连接
+            for (ClientChannelContext channelContext : channelContextList) {
+                Node serverNode = channelContext.getServerNode();
+                if (serverNode.getIp().equals(supplier.getIp()) && serverNode.getPort() == supplier.getPort()) {
+                    // supplier在列表中，直接发送消息即可
+                    p2pClient.sendToNode(channelContext, messagePacket);
+                    payloads.setNull();
+                    return true;
+                }
+            }
             payloads.setNull();
             return true;
         } else {

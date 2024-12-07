@@ -12,6 +12,7 @@ import com.example.net.base.PacketBody;
 import com.example.net.base.PacketMsgType;
 import com.example.net.client.P2pClient;
 import com.example.net.conf.ApplicationContextProvider;
+import com.example.net.events.NewBlockEvent;
 import com.example.net.events.NewPeerEvent;
 import com.example.web.service.ChainService;
 import com.example.web.service.MiningService;
@@ -64,11 +65,13 @@ public class MessageServerHandler {
     //处理接收到的新区块
     public synchronized MessagePacket receiveNewBlock(byte[] msgBody) {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
-        if (!validationService.processNewBlock(newBlock)) {
+        if (!validationService.processNewMinedBlock(newBlock)) {
             logger.info("校验新区块失败, hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
             return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, false), "校验新区块失败");
         }
         logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
+        // 广播给其他peer
+        ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
         return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, true), "成功");
 
     }

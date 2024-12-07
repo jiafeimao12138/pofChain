@@ -12,8 +12,8 @@ import java.util.ArrayDeque;
 public interface ProgramService {
 
     boolean prepareTargetProgram(String path, String objPath);
-    void byteToFile(byte[] fileBytes, String path, String name);
-    Path chooseTargetProgram(String path);
+    String byteToFile(byte[] fileBytes, String path, String name);
+    String chooseTargetProgram(String dirPath);
     ArrayDeque<MutablePair<byte[], Peer>> getProgramQueue();
     boolean addProgramQueue(MutablePair<byte[], Peer> pair);
 }

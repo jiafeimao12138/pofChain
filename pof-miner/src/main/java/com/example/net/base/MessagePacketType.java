@@ -33,4 +33,6 @@ public interface MessagePacketType
     byte RES_PROG_QUEUE = -8;
     // supplier广播新路径排名
     byte NEW_PATH_RANK = 9;
+    // fuzzer向supplier提交payloads
+    byte PAYLOADS_SUBMIT = 10;
 }

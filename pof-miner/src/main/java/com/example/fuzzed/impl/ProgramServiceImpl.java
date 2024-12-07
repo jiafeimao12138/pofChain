@@ -1,11 +1,13 @@
 package com.example.fuzzed.impl;
 
 import com.example.base.entities.Peer;
+import com.example.base.store.DBStore;
 import com.example.fuzzed.ProgramService;
 import com.example.net.client.P2pClient;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.conf.P2pNetConfig;
 import com.example.net.events.NewTargetProgramEvent;
+import com.example.web.service.PeerService;
 import com.sun.jmx.remote.internal.ArrayQueue;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,8 @@ public class ProgramServiceImpl implements ProgramService {
 
     private static final Logger logger = LoggerFactory.getLogger(ProgramServiceImpl.class);
     private final P2pNetConfig p2pNetConfig;
+    private final PeerService peerService;
+    private final DBStore dbStore;
     // 待测程序队列，队列头为下一次fuzzing的程序
     ArrayDeque <MutablePair<byte[], Peer>> ProgramQueue = new ArrayDeque<>(16);
 
@@ -68,7 +72,7 @@ public class ProgramServiceImpl implements ProgramService {
 
     // 将接收到的byte[]转换为file，准备fuzz
     @Override
-    public void byteToFile(byte[] fileBytes, String path, String name) {
+    public String byteToFile(byte[] fileBytes, String path, String name) {
         String absolutePath = path + name + System.currentTimeMillis();
         File file = new File(absolutePath);
         try {
@@ -81,6 +85,7 @@ public class ProgramServiceImpl implements ProgramService {
                 Process process = processBuilder.start();
                 process.waitFor();
                 logger.info("克隆待测程序成功：{}", file.getName());
+
             } catch (FileNotFoundException e) {
                 throw new RuntimeException(e);
             } catch (IOException e) {
@@ -91,22 +96,24 @@ public class ProgramServiceImpl implements ProgramService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        return absolutePath;
     }
 
     @Override
-    public Path chooseTargetProgram(String directorypath) {
-
-        try {
-            Path path = Paths.get(directorypath);
-            Path oldestFile = findOldestFile(path);
-            if (oldestFile != null) {
-                logger.info("选择队列头：{}", oldestFile.toString());
-                return oldestFile;
+    public String chooseTargetProgram(String directorypath) {
+        // 选择队列头并弹出
+        if (!ProgramQueue.isEmpty()) {
+            MutablePair<byte[], Peer> pair = ProgramQueue.pop();
+            byte[] fileBytes = pair.getLeft();
+            Peer node = pair.getRight();
+            if (!peerService.addSupplierPeer(node)) {
+                logger.info("更新supplier失败");
             }
-            return null;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            String fileName = "Program_";
+            // 返回待测程序的路径
+            return byteToFile(fileBytes, directorypath, fileName);
         }
+        return null;
     }
 
     private Path findOldestFile(Path directory) throws IOException {
@@ -134,4 +141,5 @@ public class ProgramServiceImpl implements ProgramService {
     public boolean addProgramQueue(MutablePair<byte[], Peer> pair) {
         return ProgramQueue.offer(pair);
     }
+
 }

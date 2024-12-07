@@ -6,10 +6,17 @@ import com.example.web.service.PeerService;
 import org.springframework.stereotype.Service;
 import org.tio.client.ClientChannelContext;
 
+import java.util.Optional;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 @Service
 public class PeerServiceImpl implements PeerService {
 
     private final DBStore dbStore;
+    private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+    private final Lock readLock = rwl.readLock();
+    private final Lock writeLock = rwl.writeLock();
 
     public PeerServiceImpl(DBStore dbStore) {
         this.dbStore = dbStore;
@@ -22,15 +29,28 @@ public class PeerServiceImpl implements PeerService {
 
     @Override
     public boolean addSupplierPeer(Peer peer) {
-        if (hasPeer(peer)) {
-            return dbStore.put(SUPPLIER_PREFIX + peer.toString(), peer);
+        writeLock.lock();
+        if (hasPeer(peer) && dbStore.put(SUPPLIER_PREFIX, peer)) {
+            writeLock.unlock();
+            return true;
         }
-        return dbStore.put(PEER_PREFIX + peer.toString(), peer) &
-                dbStore.put(SUPPLIER_PREFIX + peer.toString(), peer);
+        if(dbStore.put(PEER_PREFIX + peer, peer) &
+                dbStore.put(SUPPLIER_PREFIX + peer, peer)) {
+            writeLock.unlock();
+            return true;
+        }
+        return false;
     }
 
     @Override
     public Peer getSupplierPeer() {
+        readLock.lock();
+        Optional<Object> o = dbStore.get(SUPPLIER_PREFIX);
+        if (o.isPresent()) {
+            Peer node = (Peer) o.get();
+            readLock.unlock();
+            return node;
+        }
         return null;
     }
 
@@ -41,6 +61,11 @@ public class PeerServiceImpl implements PeerService {
 
     @Override
     public boolean addPeer(Peer peer) {
-        return dbStore.put(PEER_PREFIX + peer.toString(), peer);
+        writeLock.lock();
+        if(dbStore.put(PEER_PREFIX + peer.toString(), peer)) {
+            writeLock.unlock();
+            return true;
+        }
+        return false;
     }
 }

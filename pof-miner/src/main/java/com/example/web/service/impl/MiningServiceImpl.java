@@ -12,6 +12,8 @@ import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewBlockEvent;
 import com.example.web.service.ChainService;
 import com.example.web.service.MiningService;
+import com.example.web.service.PeerService;
+import com.example.web.service.ValidationService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,10 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -49,7 +48,8 @@ public class MiningServiceImpl implements MiningService {
     private final DBStore rocksDBStore;
     private final ChainService chainService;
     private final ProgramService programService;
-    private final P2pClient p2pClient;
+    private final PeerService peerService;
+    private final ValidationService validationService;
     // 存储中间值
     private final Payloads payloads;
     private List<Payload> triples;
@@ -71,21 +71,24 @@ public class MiningServiceImpl implements MiningService {
     public void startMining() {
 
         new Thread(() -> {
-            logger.info("开始进行Fuzzing挖矿");
+            logger.info("开始进行新一轮Fuzzing挖矿");
             try {
 //                Block preBlock = getLatestBlock();
 //                miner.mineAndFuzzing(preBlock);
 //                ProofOfFuzzing proofOfFuzzing = ProofOfFuzzing.newProofOfFuzzing(preBlock);
 //                proofOfFuzzing.run();
-                Path tobeFuzzedPath = programService.chooseTargetProgram(targetProgramQueueDir);
-                executeCommand(tobeFuzzedPath);
+                String tobeFuzzedPath = programService.chooseTargetProgram(targetProgramQueueDir);
+                if (tobeFuzzedPath == null) {
+                    logger.info("待测程序队列为空，当前无待测程序");
+                }
+                executeCommand(tobeFuzzedPath, peerService.getSupplierPeer());
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }).start();
     }
 
-    public void executeCommand(Path targetProgram) {
+    public void executeCommand(String targetProgram, Peer supplier) {
         //区间
         List<BigInteger> interval = generateRandomHashHead(6);
         BigInteger head = interval.get(0);
@@ -100,7 +103,7 @@ public class MiningServiceImpl implements MiningService {
         ProcessBuilder processBuilder = new ProcessBuilder();
 //        指定工作目录
         processBuilder.directory(new java.io.File("/home/wj/pofChain/AFL"));
-        processBuilder.command("afl-fuzz", "-i", "fuzz_in/", "-o", "fuzz_out", targetProgram.toString());
+        processBuilder.command("afl-fuzz", "-i", "fuzz_in/", "-o", "fuzz_out", targetProgram);
 
         try {
             Process process = processBuilder.start();
@@ -134,22 +137,9 @@ public class MiningServiceImpl implements MiningService {
                         String newHash = newBlock.getHash();
 
                         logger.info("新区块中的payload长度为：{}", newBlock.getBlockHeader().getTriples().size());
+                        // 当命中区间
                         if(isInInterval(newHash, head, end)) {
-                            hitCount ++;
-                            logger.info("hitCount = {}, totalWindowNum = {}", hitCount, num-1);
-                            logger.info("挖矿成功，新区块高度为{}，hash={}，前一个区块hash={}",
-                                    newBlock.getBlockHeader().getHeight(), newHash,newBlock.getBlockHeader().getHashPreBlock());
-                            // 广播
-                            ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
-                            logger.info("广播新Block,hash={}", newBlock.getHash());
-                            storeBlock(newBlock);
-                            rocksDBStore.get(BlockPrefix.BLOCK_HEIGHT_PREFIX.getPrefix() + newBlock.getBlockHeader().getHeight());
-                            logger.info("存入新区块，高度为{}，hash={}", newBlock.getBlockHeader().getHeight(), newBlock.getHash());
-                            endWindow = System.currentTimeMillis();
-                            logger.info("endWindow: {}", endWindow);
-                            long time = endWindow - lastWindowEnd;
-                            lastWindowEnd = endWindow;
-                            Files.write(path, Long.toString(time).getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                            whenmined(newBlock, newHash);
                         } else {
                             Files.write(path, "not hit".getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
                         }
@@ -204,6 +194,25 @@ public class MiningServiceImpl implements MiningService {
         }
         //不在[head,end]中
         return false;
+    }
+
+    // 当寻找到满足要求的区块后
+    public void whenmined(Block newBlock, String newHash) throws IOException {
+        hitCount ++;
+        logger.info("挖矿成功，新区块高度为{}，hash={}，前一个区块hash={}",
+                newBlock.getBlockHeader().getHeight(), newHash,newBlock.getBlockHeader().getHashPreBlock());
+        // 广播
+        ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
+        logger.info("广播新Block,hash={}", newHash);
+//        storeBlock(newBlock);
+//        rocksDBStore.get(BlockPrefix.BLOCK_HEIGHT_PREFIX.getPrefix() + newBlock.getBlockHeader().getHeight());
+//        logger.info("存入新区块，高度为{}，hash={}", newBlock.getBlockHeader().getHeight(), newBlock.getHash());
+        validationService.processNewMinedBlock(newBlock);
+        endWindow = System.currentTimeMillis();
+        logger.info("endWindow: {}", endWindow);
+        long time = endWindow - lastWindowEnd;
+        lastWindowEnd = endWindow;
+        Files.write(path, Long.toString(time).getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
     //存储新区块到本地区块链中
