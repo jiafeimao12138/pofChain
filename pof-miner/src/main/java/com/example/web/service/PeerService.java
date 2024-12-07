@@ -11,7 +11,9 @@ public interface PeerService {
     // 添加普通peer
     boolean addPeer(Peer peer);
     // 添加供应商peer
-    boolean addSupplierPeer(Peer peer, ClientChannelContext channelContext);
+    boolean addSupplierPeer(Peer peer);
+    // 获取当前supplier
+    Peer getSupplierPeer();
     // 该程序fuzzing完毕后，移除supplier
     boolean removeSupplier(Peer peer);
 }

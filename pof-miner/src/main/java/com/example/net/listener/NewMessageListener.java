@@ -9,10 +9,13 @@ import com.example.net.client.P2pClient;
 import com.example.net.events.NewMsgEvent;
 import com.example.net.events.NewPathRank;
 import com.example.net.events.NewTargetProgramEvent;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.tio.core.Node;
 
 import java.io.File;
 import java.util.LinkedHashMap;
@@ -40,11 +43,9 @@ public class NewMessageListener {
 
     @EventListener(NewTargetProgramEvent.class)
     public void onNewTargetProgram(NewTargetProgramEvent event) {
-        byte[] fileBytes = (byte[])event.getSource();
         MessagePacket messagePacket = new MessagePacket();
         messagePacket.setType(MessagePacketType.PUBLISH_FILE);
-        messagePacket.setBody(fileBytes);
-        messagePacket.setNode(SerializeUtils.serialize(event.getNode()));
+        messagePacket.setBody(SerializeUtils.serialize(event.getPair()));
         p2pClient.sendToGroup(messagePacket);
     }
 

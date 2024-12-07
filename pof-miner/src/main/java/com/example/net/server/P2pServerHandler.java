@@ -1,10 +1,14 @@
 package com.example.net.server;
 
 import com.example.base.entities.Block;
+import com.example.base.entities.Peer;
 import com.example.base.utils.SerializeUtils;
 import com.example.net.base.BaseTioHandler;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.tio.core.ChannelContext;
@@ -65,8 +69,11 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 responsePacket = serverHandler.receiveHeightReq(msgBody);
                 break;
             case MessagePacketType.PUBLISH_FILE:
-                logger.info("收到新待测程序");
-                serverHandler.receiveFile(msgBody, targetProgramQueueDir, "program_");
+                MutablePair<byte[], Peer> nodePair = (MutablePair<byte[], Peer>) SerializeUtils.unSerialize(msgBody);
+                byte[] fileByte = nodePair.getLeft();
+                Peer node = nodePair.getRight();
+                logger.info("收到新待测程序, node:{}", node);
+                serverHandler.receiveFile(nodePair, targetProgramQueueDir, "program_");
                 break;
             case MessagePacketType.NEW_PATH_RANK:
                 // @TODO 实时推送给前端

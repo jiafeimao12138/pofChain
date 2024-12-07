@@ -21,9 +21,17 @@ public class PeerServiceImpl implements PeerService {
     }
 
     @Override
-    public boolean addSupplierPeer(Peer peer, ClientChannelContext channelContext) {
+    public boolean addSupplierPeer(Peer peer) {
+        if (hasPeer(peer)) {
+            return dbStore.put(SUPPLIER_PREFIX + peer.toString(), peer);
+        }
         return dbStore.put(PEER_PREFIX + peer.toString(), peer) &
                 dbStore.put(SUPPLIER_PREFIX + peer.toString(), peer);
+    }
+
+    @Override
+    public Peer getSupplierPeer() {
+        return null;
     }
 
     @Override

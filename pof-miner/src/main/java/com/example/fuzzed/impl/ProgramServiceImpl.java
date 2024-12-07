@@ -1,11 +1,18 @@
 package com.example.fuzzed.impl;
 
+import com.example.base.entities.Peer;
 import com.example.fuzzed.ProgramService;
 import com.example.net.client.P2pClient;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.conf.P2pNetConfig;
 import com.example.net.events.NewTargetProgramEvent;
+import com.sun.jmx.remote.internal.ArrayQueue;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -19,13 +26,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayDeque;
 
 @Service
+@RequiredArgsConstructor
 public class ProgramServiceImpl implements ProgramService {
 
     private static final Logger logger = LoggerFactory.getLogger(ProgramServiceImpl.class);
-
-    private P2pNetConfig p2pNetConfig;
+    private final P2pNetConfig p2pNetConfig;
+    // 待测程序队列，队列头为下一次fuzzing的程序
+    ArrayDeque <MutablePair<byte[], Peer>> ProgramQueue = new ArrayDeque<>(16);
 
     // 将待测程序转换为目标可执行文件
     @Override
@@ -44,9 +54,10 @@ public class ProgramServiceImpl implements ProgramService {
             // 读取文件的字节
             byte[] fileBytes = Files.readAllBytes(file.toPath());
             // 广播该目标可执行文件和ip
-            ApplicationContextProvider.publishEvent(new NewTargetProgramEvent(fileBytes,
-                    new Node(p2pNetConfig.getServerAddress(), p2pNetConfig.getServerPort())));
-            logger.info("已广播待测可执行文件：{}, 长度:{}", file.getName(), fileBytes.length);
+            MutablePair<byte[], Peer> pair = new MutablePair<>(fileBytes,
+                    new Peer(p2pNetConfig.getServerAddress(), p2pNetConfig.getServerPort()));
+            ApplicationContextProvider.publishEvent(new NewTargetProgramEvent(pair));
+            logger.info("已广播待测可执行文件：{}, 长度:{}, Node:{}", file.getName(), fileBytes.length, pair.getRight());
         } catch (IOException e) {
             throw new RuntimeException(e);
         } catch (InterruptedException e) {
@@ -112,5 +123,15 @@ public class ProgramServiceImpl implements ProgramService {
                     }
                 })
                 .orElse(null); // 如果没有文件，返回 null
+    }
+
+    @Override
+    public ArrayDeque<MutablePair<byte[], Peer>> getProgramQueue() {
+        return ProgramQueue;
+    }
+
+    @Override
+    public boolean addProgramQueue(MutablePair<byte[], Peer> pair) {
+        return ProgramQueue.offer(pair);
     }
 }

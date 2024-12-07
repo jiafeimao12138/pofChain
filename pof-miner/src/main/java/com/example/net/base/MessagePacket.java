@@ -9,7 +9,12 @@ public class MessagePacket extends Packet {
     public static final String HELLO_MESSAGE = "Hello pofChain.";
     private byte type;
     private byte[] body;
-    private byte[] node;
+
     public MessagePacket() {
+    }
+
+    public MessagePacket(byte type, byte[] body) {
+        this.type = type;
+        this.body = body;
     }
 }

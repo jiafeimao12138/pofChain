@@ -18,12 +18,14 @@ import com.example.web.service.MiningService;
 import com.example.web.service.PeerService;
 import com.example.web.service.ValidationService;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.tio.core.Node;
 
 import java.io.File;
+import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -101,9 +103,21 @@ public class MessageServerHandler {
         return buildPacket(MessagePacketType.RES_HEIGHT, new PacketBody(height, PacketMsgType.SUCEESS), "成功");
     }
 
-    public synchronized void receiveFile(byte[] msgBody, String path, String name) {
-        logger.info("收到file，长度为{}", msgBody.length);
-        programService.byteToFile(msgBody, path, name);
+    public synchronized void receiveFile(MutablePair<byte[], Peer> nodePair, String path, String name) {
+        Peer node = nodePair.getRight();
+        logger.info("收到file，长度为{}; 发送方：{}:{}", nodePair.getLeft().length, node.getIp(), node.getPort());
+        // 将node存入数据库
+        if(peerService.addSupplierPeer(nodePair.getRight())){
+            logger.info("supplier信息存入数据库");
+        }
+        // 收到program后，放入队列
+        if(programService.addProgramQueue(nodePair)){
+            ArrayDeque<MutablePair<byte[], Peer>> queue = programService.getProgramQueue();
+            for (MutablePair<byte[], Peer> peerMutablePair : queue) {
+                logger.info("队列中内容：文件长度为{},node为{}",peerMutablePair.getLeft().length,peerMutablePair.getRight());
+            }
+        }
+//        programService.byteToFile(fileByte, path, name);
     }
 
     public synchronized void receiveNewPathRank(byte[] msgBody) {
