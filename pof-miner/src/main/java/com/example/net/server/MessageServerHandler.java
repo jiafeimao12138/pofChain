@@ -1,10 +1,8 @@
 package com.example.net.server;
 
-import com.example.base.entities.Block;
-import com.example.base.entities.Message;
-import com.example.base.entities.NewPath;
-import com.example.base.entities.Peer;
+import com.example.base.entities.*;
 import com.example.base.utils.SerializeUtils;
+import com.example.fuzzed.NewPathService;
 import com.example.fuzzed.ProgramService;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
@@ -20,15 +18,15 @@ import com.example.web.service.PeerService;
 import com.example.web.service.ValidationService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.tio.client.ClientChannelContext;
 import org.tio.core.Node;
 
 import java.io.File;
-import java.util.ArrayDeque;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 
 // 处理其他node发送的message request
 @Component
@@ -41,6 +39,8 @@ public class MessageServerHandler {
     private final ChainService chainService;
     private final P2pClient p2pClient;
     private final ProgramService programService;
+    private final NewPathService newPathService;
+    private final Payloads payloads;
 
 
     public synchronized MessagePacket helloMessage(byte[] msgBody) {
@@ -56,13 +56,14 @@ public class MessageServerHandler {
             peerService.addPeer(peer);
         }
         // TODO：接收到hello消息的回复才认为连接成功
-        if (p2pClient.connect(new Node(peer.getIp(),peer.getPort()))) {
+        if (p2pClient.connect(new Node(peer.getIp(),peer.getPort())) != null) {
             logger.info("已连接新节点：{}", peer);
             ApplicationContextProvider.publishEvent(new NewPeerEvent(peer));
         }
     }
 
-    //处理接收到的新区块
+    //fuzzer处理接收到的新区块
+    // TODO：supplier收到新区块就不用汇报，所以得设置标记supplier
     public synchronized MessagePacket receiveNewBlock(byte[] msgBody) {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
         if (!validationService.processNewMinedBlock(newBlock)) {
@@ -72,8 +73,48 @@ public class MessageServerHandler {
         logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
         // 广播给其他peer
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
+        // 存储新区块后，需要汇报该Fuzzer自己本轮挖掘出的path信息,并附上新区块
+        payloads.setNewBlock(newBlock);
+        // @TODO: fuzzerAddress获取
+        String address = "";
+        payloads.setAddress(address);
+        MessagePacket messagePacket = new MessagePacket();
+        messagePacket.setType(MessagePacketType.PAYLOADS_SUBMIT);
+        messagePacket.setBody(SerializeUtils.serialize(payloads));
+        // 发送给supplier
+        Peer supplier = peerService.getSupplierPeer();
+        List<ClientChannelContext> channelContextList = p2pClient.getChannelContextList();
+        // 在维护的列表中查找supplier
+        for (ClientChannelContext channelContext : channelContextList) {
+            Node serverNode = channelContext.getServerNode();
+            if (serverNode.getIp().equals(supplier.getIp()) && serverNode.getPort() == supplier.getPort()) {
+                // supplier在列表中，直接发送消息即可
+                p2pClient.sendToNode(channelContext, messagePacket);
+                payloads.setNull();
+            }
+        }
+        // 如果没查到，重新连接
+        try {
+            ClientChannelContext channelContext = p2pClient.connect(new Node(supplier.getIp(), supplier.getPort()));
+            p2pClient.sendToNode(channelContext, messagePacket);
+            payloads.setNull();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, true), "成功");
+    }
 
+    // supplier或者observer处理接收到的新节点，不需要提交payloads
+    public synchronized MessagePacket receiveNewBlock_supplierOrobserver(byte[] msgBody){
+        Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
+        if (!validationService.processNewMinedBlock(newBlock)) {
+            logger.info("校验新区块失败, hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
+            return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, false), "校验新区块失败");
+        }
+        logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
+        // 广播给其他peer
+        ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
+        return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, true), "成功");
     }
 
     //处理接收到的新消息
@@ -129,6 +170,27 @@ public class MessageServerHandler {
                 (LinkedHashMap<String, List<NewPath>>) SerializeUtils.unSerialize(msgBody);
         rank.entrySet().stream().forEach(stringListEntry ->
                 System.out.println(stringListEntry.getKey() + ":" + stringListEntry.getValue()));
+    }
+
+    // supplier接收并处理fuzzer提交的payloads
+    public synchronized boolean processPayloads(byte[] msgBody, long timestamp) {
+        Payloads payloads = (Payloads) SerializeUtils.unSerialize(msgBody);
+        List<Payload> pathList = payloads.getPayloads();
+        String address = payloads.getAddress();
+        Block newBlock = payloads.getNewBlock();
+        // 先校验newBlock
+        if(validationService.supplierCheckNewBlock(newBlock)) {
+            List<NewPath> newPaths = newPathService.ProcessPayloads(pathList, timestamp, address);
+            // 添加到NewPathMap中，等待排名
+            newPathService.addNewPathMap(address, timestamp, newPaths);
+            HashMap<String, MutablePair<List<NewPath>, Long>> newPathMap = newPathService.getNewPathMap();
+            logger.info("NewPathMap:");
+            for (Map.Entry<String, MutablePair<List<NewPath>, Long>> entry : newPathMap.entrySet()) {
+                System.out.println(entry.getKey() + ":" + entry.getValue());
+            }
+            return true;
+        }
+        return false;
     }
 
     private MessagePacket buildPacket(byte type, PacketBody packetBody, String message)

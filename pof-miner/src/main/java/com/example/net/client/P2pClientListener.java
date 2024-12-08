@@ -58,6 +58,7 @@ public class P2pClientListener implements TioClientListener {
 
     }
 
+    // 断开连接
     @Override
     public void onBeforeClose(ChannelContext channelContext, Throwable throwable, String s, boolean b) throws Exception {
         Tio.unbindGroup(P2pNetConfig.NODE_GROUP_NAME, channelContext);

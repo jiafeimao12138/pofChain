@@ -32,14 +32,13 @@ public class P2pClient {
     private TioClient tioClient;
     private final TioClientConfig tioClientConfig;
     private final P2pNetConfig p2pNetConfig;
-    private final List<ClientChannelContext> channelContextList;
+    private List<ClientChannelContext> channelContextList;
 
 
     public P2pClient(P2pNetConfig p2pNetConfig,
                      P2pClientHandler p2pClientHandler,
-                     P2pClientListener p2pClientListener,
-                     List<ClientChannelContext> channelContextList) {
-        this.channelContextList = channelContextList;
+                     P2pClientListener p2pClientListener) {
+        this.channelContextList = new ArrayList<>();
         // autoReconnect
         ReconnConf reconnConf = new ReconnConf(5000L, 20);
         TioClientConfig tioClientConfig = new TioClientConfig(p2pClientHandler, p2pClientListener, reconnConf);
@@ -76,18 +75,17 @@ public class P2pClient {
 
 
     // 连接新节点
-    public boolean connect(Node node) throws Exception
+    public ClientChannelContext connect(Node node) throws Exception
     {
         if (StringUtils.equals(node.getIp(), p2pNetConfig.getServerAddress()) && node.getPort() == p2pNetConfig.getServerPort()) {
             logger.info("skip self connections, {}", node);
-            return false;
+            return null;
         }
 
         // 如果这个节点已经连接了，则返回false
         if (P2pNetConfig.SERVERS.containsKey(node)) {
-            return false;
+            return null;
         }
-
         P2pNetConfig.SERVERS.put(node, true);
         ClientChannelContext channelContext = tioClient.connect(node);
         Thread.sleep(5000);
@@ -105,7 +103,7 @@ public class P2pClient {
 //            Tio.send(channelContext, hellopacket);
 //            logger.info("send hello message to {}", node);
         channelContextList.add(channelContext);
-        return true;
+        return channelContext;
     }
 
 

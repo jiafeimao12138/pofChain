@@ -19,7 +19,6 @@ public class ChainServiceImpl implements ChainService {
 
     private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private final Lock readLock = rwl.readLock();
-    private final Lock writeLock = rwl.writeLock();
 
     public ChainServiceImpl(DBStore dbStore) {
         this.rocksDBStore = dbStore;
@@ -63,13 +62,16 @@ public class ChainServiceImpl implements ChainService {
 
     @Override
     public Block getLocalLatestBlock() {
+        readLock.lock();
         Block block = new Block();
         Optional<Object> o = rocksDBStore.get(BlockPrefix.HEIGHT.getPrefix());
         if (o.isPresent()) {
             long height = (long)o.get();
             block = getBlockByHeight(height);
+            readLock.unlock();
             return block;
         }
+        readLock.unlock();
         return block;
     }
 
@@ -81,11 +83,14 @@ public class ChainServiceImpl implements ChainService {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        readLock.lock();
         Optional<Object> o = rocksDBStore.get(BlockPrefix.CHAIN_HEIGHT.getPrefix());
         if (o.isPresent()) {
             long height = (long) o.get();
+            readLock.unlock();
             return height;
         }
+        readLock.unlock();
         return -1;
     }
 }

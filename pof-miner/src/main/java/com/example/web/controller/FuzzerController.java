@@ -1,15 +1,15 @@
 package com.example.web.controller;
 
 import com.example.base.entities.Block;
+import com.example.base.entities.NodeType;
+import com.example.net.server.P2pServer;
 import com.example.web.service.ChainService;
 import com.example.web.service.MiningService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * @author jiafeimao
@@ -17,13 +17,19 @@ import java.util.List;
  */
 @RestController
 @RequiredArgsConstructor
-public class BlockController {
+@RequestMapping("fuzzer")
+public class FuzzerController {
+
+    private static final Logger logger = LoggerFactory.getLogger(FuzzerController.class);
 
     private final MiningService miningService;
     private final ChainService chainService;
+    private final P2pServer p2pServer;
 
     @RequestMapping("startmining")
     public void mine() {
+        p2pServer.setMeType(NodeType.FUZZER);
+        logger.info("node: {}", p2pServer.getMe());
         if (miningService.AFLswitchRoot()){
             miningService.startMining();
         }

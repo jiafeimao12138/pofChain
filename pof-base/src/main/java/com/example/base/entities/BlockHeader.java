@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Data
 public class BlockHeader {
@@ -45,5 +46,25 @@ public class BlockHeader {
                 ", nBits=" + nBits +
                 ", triples=" + triples +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof BlockHeader)) return false;
+        BlockHeader that = (BlockHeader) o;
+        return nVersion == that.nVersion &&
+                height == that.height &&
+                nTime == that.nTime &&
+                nNonce == that.nNonce &&
+                nBits == that.nBits &&
+                Objects.equals(hashPreBlock, that.hashPreBlock) &&
+                Objects.equals(hashMerkleRoot, that.hashMerkleRoot) &&
+                Objects.equals(triples, that.triples);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(nVersion, hashPreBlock, hashMerkleRoot, height, nTime, nNonce, nBits, triples);
     }
 }

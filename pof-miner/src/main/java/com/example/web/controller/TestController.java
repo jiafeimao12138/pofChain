@@ -1,10 +1,13 @@
 package com.example.web.controller;
 
 import com.example.base.entities.Message;
+import com.example.base.entities.Node;
+import com.example.base.entities.NodeType;
 import com.example.base.utils.SerializeUtils;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
 import com.example.net.client.P2pClient;
+import com.example.net.server.P2pServer;
 import com.example.web.service.testservice1;
 import com.example.web.service.testservice2;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,7 @@ public class TestController {
     private final testservice1 service1;
     private final testservice2 service2;
     private final P2pClient client;
+    private final P2pServer p2pServer;
     private List<ClientChannelContext> channelContextList;
 
     @RequestMapping("/setPayloads")
@@ -58,5 +62,12 @@ public class TestController {
             System.out.println("向" + channelContextList.get(i) + "发送hello消息");
             Tio.send(channelContextList.get(i), packet);
         }
+    }
+
+    @RequestMapping("/changeNodeType")
+    public void changeNodeType() {
+        p2pServer.setMeType(NodeType.FUZZER);
+        Node me = p2pServer.getMe();
+        System.out.println(me);
     }
 }

@@ -72,12 +72,19 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 MutablePair<byte[], Peer> nodePair = (MutablePair<byte[], Peer>) SerializeUtils.unSerialize(msgBody);
                 byte[] fileByte = nodePair.getLeft();
                 Peer node = nodePair.getRight();
-                logger.info("收到新待测程序, node:{}", node);
+                logger.info("收到新待测程序, filesize:{}, node:{}", fileByte.length, node);
                 serverHandler.receiveFile(nodePair, targetProgramQueueDir, "program_");
                 break;
             case MessagePacketType.NEW_PATH_RANK:
                 // @TODO 实时推送给前端
                 serverHandler.receiveNewPathRank(msgBody);
+                break;
+            case MessagePacketType.PAYLOADS_SUBMIT:
+                if(serverHandler.processPayloads(msgBody, System.currentTimeMillis())) {
+                    logger.info("成功接收payloads");
+                }else {
+                    logger.info("丢弃payloads");
+                }
                 break;
         }
         logger.info("server回复client: channelContext:{}", channelContext);

@@ -1,11 +1,11 @@
 package com.example.web.service;
 
 import com.example.base.entities.Peer;
-import org.tio.client.ClientChannelContext;
 
 public interface PeerService {
     String PEER_PREFIX = "/peer/";
     String SUPPLIER_PREFIX = "/supplier/";
+
     // 判断是否存在该peer
     boolean hasPeer(Peer peer);
     // 添加普通peer

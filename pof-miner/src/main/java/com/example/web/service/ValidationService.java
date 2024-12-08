@@ -9,4 +9,5 @@ public interface ValidationService {
     boolean checkTransactions(Block block);
     boolean storeBlock(Block block);
     boolean storeChainHeight(long height);
+    boolean supplierCheckNewBlock(Block block);
 }

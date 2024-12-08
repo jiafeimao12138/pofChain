@@ -1,8 +1,11 @@
 package com.example.base.entities;
 
 
+import org.springframework.stereotype.Component;
+
 import java.io.Serializable;
 import java.util.List;
+
 
 public class Payload implements Serializable {
     private String input;

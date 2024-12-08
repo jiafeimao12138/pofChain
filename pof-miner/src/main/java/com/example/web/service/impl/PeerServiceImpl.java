@@ -4,7 +4,6 @@ import com.example.base.entities.Peer;
 import com.example.base.store.DBStore;
 import com.example.web.service.PeerService;
 import org.springframework.stereotype.Service;
-import org.tio.client.ClientChannelContext;
 
 import java.util.Optional;
 import java.util.concurrent.locks.Lock;

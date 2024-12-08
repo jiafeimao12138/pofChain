@@ -8,7 +8,7 @@ import com.example.base.utils.CryptoUtils;
 import com.example.fuzzed.NewPathService;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewPathRank;
-import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -17,11 +17,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class NewPathServiceImpl implements NewPathService {
     private static final Logger logger = LoggerFactory.getLogger(NewPathServiceImpl.class);
 
     private final DBStore dbStore;
+    private HashMap<String, MutablePair<List<NewPath>, Long>> NewPathMap;
+
+    public NewPathServiceImpl(DBStore dbStore) {
+        this.dbStore = dbStore;
+        this.NewPathMap = new HashMap<>();
+    }
+
     @Override
     public List<NewPath> ProcessPayloads(List<Payload> payloads, long timestamp, String fuzzerAddress) {
         HashSet<List<Integer>> paths = new HashSet<>();
@@ -58,6 +64,7 @@ public class NewPathServiceImpl implements NewPathService {
                 newPahtList.add(newPath);
             }
         }
+        NewPathMap.put(fuzzerAddress, new MutablePair<>(newPahtList, timestamp));
         return newPahtList;
     }
 
@@ -86,6 +93,15 @@ public class NewPathServiceImpl implements NewPathService {
         // 广播
         ApplicationContextProvider.publishEvent(new NewPathRank(sortedmap));
         logger.info("已广播本轮Fuzzing的新路径排名");
+    }
+
+    public HashMap<String, MutablePair<List<NewPath>, Long>> getNewPathMap() {
+        return NewPathMap;
+    }
+
+    public void addNewPathMap(String address, long timestamp, List<NewPath> newPaths) {
+        MutablePair<List<NewPath>, Long> pair = new MutablePair<>(newPaths, timestamp);
+        NewPathMap.put(address, pair);
     }
 
 }

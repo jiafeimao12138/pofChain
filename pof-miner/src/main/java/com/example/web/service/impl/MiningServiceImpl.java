@@ -5,8 +5,11 @@ import com.example.base.Exception.WindowFileException;
 import com.example.base.entities.*;
 import com.example.base.store.BlockPrefix;
 import com.example.base.store.DBStore;
+import com.example.base.utils.SerializeUtils;
 import com.example.base.utils.WindowFileUtils;
 import com.example.fuzzed.ProgramService;
+import com.example.net.base.MessagePacket;
+import com.example.net.base.MessagePacketType;
 import com.example.net.client.P2pClient;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewBlockEvent;
@@ -19,6 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.tio.client.ClientChannelContext;
+import org.tio.core.Node;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -50,6 +55,7 @@ public class MiningServiceImpl implements MiningService {
     private final ProgramService programService;
     private final PeerService peerService;
     private final ValidationService validationService;
+    private final P2pClient p2pClient;
     // 存储中间值
     private final Payloads payloads;
     private List<Payload> triples;
@@ -69,14 +75,9 @@ public class MiningServiceImpl implements MiningService {
 
     @Override
     public void startMining() {
-
         new Thread(() -> {
             logger.info("开始进行新一轮Fuzzing挖矿");
             try {
-//                Block preBlock = getLatestBlock();
-//                miner.mineAndFuzzing(preBlock);
-//                ProofOfFuzzing proofOfFuzzing = ProofOfFuzzing.newProofOfFuzzing(preBlock);
-//                proofOfFuzzing.run();
                 String tobeFuzzedPath = programService.chooseTargetProgram(targetProgramQueueDir);
                 if (tobeFuzzedPath == null) {
                     logger.info("待测程序队列为空，当前无待测程序");
@@ -157,7 +158,6 @@ public class MiningServiceImpl implements MiningService {
             // 等待命令执行完毕
             int exitCode = process.waitFor();
             System.out.println("\nExited with code: " + exitCode);
-
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         } 
@@ -204,29 +204,42 @@ public class MiningServiceImpl implements MiningService {
         // 广播
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
         logger.info("广播新Block,hash={}", newHash);
-//        storeBlock(newBlock);
-//        rocksDBStore.get(BlockPrefix.BLOCK_HEIGHT_PREFIX.getPrefix() + newBlock.getBlockHeader().getHeight());
-//        logger.info("存入新区块，高度为{}，hash={}", newBlock.getBlockHeader().getHeight(), newBlock.getHash());
-        validationService.processNewMinedBlock(newBlock);
         endWindow = System.currentTimeMillis();
         logger.info("endWindow: {}", endWindow);
         long time = endWindow - lastWindowEnd;
         lastWindowEnd = endWindow;
         Files.write(path, Long.toString(time).getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-    }
-
-    //存储新区块到本地区块链中
-    public boolean storeBlock(Block newBlock) {
-        if (!rocksDBStore.put(BlockPrefix.BLOCK_HEIGHT_PREFIX.getPrefix() + newBlock.getBlockHeader().getHeight(), newBlock)) {
-            logger.info("存入新区块失败");
-            return false;
+        // 校验新区块
+        if (validationService.processNewMinedBlock(newBlock)) {
+            // 提交给supplier
+            payloads.setNewBlock(newBlock);
+            // @TODO: fuzzerAddress获取
+            String address = "";
+            payloads.setAddress(address);
+            MessagePacket messagePacket = new MessagePacket();
+            messagePacket.setType(MessagePacketType.PAYLOADS_SUBMIT);
+            messagePacket.setBody(SerializeUtils.serialize(payloads));
+            // 发送给supplier
+            Peer supplier = peerService.getSupplierPeer();
+            List<ClientChannelContext> channelContextList = p2pClient.getChannelContextList();
+            // 在维护的列表中查找supplier
+            for (ClientChannelContext channelContext : channelContextList) {
+                Node serverNode = channelContext.getServerNode();
+                if (serverNode.getIp().equals(supplier.getIp()) && serverNode.getPort() == supplier.getPort()) {
+                    // supplier在列表中，直接发送消息即可
+                    p2pClient.sendToNode(channelContext, messagePacket);
+                    payloads.setNull();
+                }
+            }
+            // 如果没查到，重新连接
+            try {
+                ClientChannelContext channelContext = p2pClient.connect(new Node(supplier.getIp(), supplier.getPort()));
+                p2pClient.sendToNode(channelContext, messagePacket);
+                payloads.setNull();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
-        if (!rocksDBStore.put(BlockPrefix.HEIGHT.getPrefix(), newBlock.getBlockHeader().getHeight())){
-            logger.info("存入最新高度失败");
-            return false;
-        }
-//        logger.info("存入新区块，高度为{}，hash={}", newBlock.height, newBlock.GetHash());
-        return true;
     }
     
     @Override

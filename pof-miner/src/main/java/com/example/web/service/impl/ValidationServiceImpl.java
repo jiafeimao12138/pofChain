@@ -7,6 +7,7 @@ import com.example.base.entities.Peer;
 import com.example.base.store.BlockPrefix;
 import com.example.base.store.DBStore;
 import com.example.base.utils.SerializeUtils;
+import com.example.miner.chain.Chain;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
 import com.example.net.client.P2pClient;
@@ -15,6 +16,9 @@ import com.example.web.service.PeerService;
 import com.example.web.service.ValidationService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -34,9 +38,6 @@ public class ValidationServiceImpl implements ValidationService {
     private final Lock writeLock = rwl.writeLock();
     private final ChainService chainService;
     private final DBStore dbStore;
-    private final Payloads payloads;
-    private final PeerService peerService;
-    private final P2pClient p2pClient;
 
     private final int MIN_BLOCKS_TO_KEEP = 10;
 
@@ -52,31 +53,10 @@ public class ValidationServiceImpl implements ValidationService {
         // 经过校验后进行后续步骤
         if (ret) {
             storeBlock(block);
-            // 存储新区块时，需要汇报该Fuzzer自己本轮挖掘出的path信息
-            List<Payload> pathsInfo = payloads.getPayloads();
-            MessagePacket messagePacket = new MessagePacket();
-            messagePacket.setType(MessagePacketType.PAYLOADS_SUBMIT);
-            messagePacket.setBody(SerializeUtils.serialize(pathsInfo));
-
-            // 发送给supplier
-            Peer supplier = peerService.getSupplierPeer();
-            List<ClientChannelContext> channelContextList = p2pClient.getChannelContextList();
-            // 在维护的列表中查找supplier，如果没查到，重新连接
-            for (ClientChannelContext channelContext : channelContextList) {
-                Node serverNode = channelContext.getServerNode();
-                if (serverNode.getIp().equals(supplier.getIp()) && serverNode.getPort() == supplier.getPort()) {
-                    // supplier在列表中，直接发送消息即可
-                    p2pClient.sendToNode(channelContext, messagePacket);
-                    payloads.setNull();
-                    return true;
-                }
-            }
-            payloads.setNull();
             return true;
         } else {
             return false;
         }
-
     }
 
     // 校验新区块合法性
@@ -150,5 +130,15 @@ public class ValidationServiceImpl implements ValidationService {
         }finally {
             writeLock.unlock();
         }
+    }
+
+    // supplier校验fuzzer提交的payloads中的newblock是否是正确的，不正确则拒绝接收payloads
+    // 判断提交的block是否和supplier本地的最新区块相同，因为提交payload有时间限制，过了时限supplier收到会丢弃，这里先设置时限为挖到一个区块的时间
+    @Override
+    public boolean supplierCheckNewBlock(Block block) {
+        Block latestBlock = chainService.getLocalLatestBlock();
+        if (latestBlock.equals(block))
+            return true;
+        return false;
     }
 }

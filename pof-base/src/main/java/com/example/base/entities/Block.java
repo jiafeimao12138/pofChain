@@ -10,6 +10,7 @@ import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * @author jiafeimao
@@ -42,5 +43,18 @@ public class Block implements Serializable {
         sb.append(this.transactions.toString());
         String sha256 = CryptoUtils.SHA256(sb.toString());
         return sha256;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Block)) return false;
+        Block block = (Block) o;
+        return blockHeader.equals(block.getBlockHeader()) && Objects.equals(transactions, block.transactions);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(blockHeader, transactions);
     }
 }
