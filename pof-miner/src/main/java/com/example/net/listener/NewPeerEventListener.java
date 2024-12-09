@@ -5,6 +5,7 @@ import com.example.base.utils.SerializeUtils;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
 import com.example.net.client.P2pClient;
+import com.example.net.events.GetProgramQueue;
 import com.example.net.events.NewPeerEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,5 +30,14 @@ public class NewPeerEventListener {
         packet.setBody(SerializeUtils.serialize(peer));
         p2pClient.sendToGroup(packet);
         logger.info("已广播新peer:{}", peer);
+    }
+
+    @EventListener(GetProgramQueue.class)
+    public void onGetProgramQueue(GetProgramQueue event) {
+        MessagePacket packet = new MessagePacket();
+        packet.setType(MessagePacketType.PROGRAM_QUEUQ_REQ);
+        packet.setBody(SerializeUtils.serialize(event));
+        p2pClient.sendToGroup(packet);
+        logger.info("已广播请求programQueue");
     }
 }

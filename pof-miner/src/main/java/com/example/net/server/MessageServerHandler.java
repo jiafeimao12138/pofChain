@@ -63,8 +63,7 @@ public class MessageServerHandler {
     }
 
     //fuzzer处理接收到的新区块
-    // TODO：supplier收到新区块就不用汇报，所以得设置标记supplier
-    public synchronized MessagePacket receiveNewBlock(byte[] msgBody) {
+    public synchronized MessagePacket receiveNewBlock(byte[] msgBody, String address) {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
         if (!validationService.processNewMinedBlock(newBlock)) {
             logger.info("校验新区块失败, hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
@@ -76,7 +75,6 @@ public class MessageServerHandler {
         // 存储新区块后，需要汇报该Fuzzer自己本轮挖掘出的path信息,并附上新区块
         payloads.setNewBlock(newBlock);
         // @TODO: fuzzerAddress获取
-        String address = "";
         payloads.setAddress(address);
         MessagePacket messagePacket = new MessagePacket();
         messagePacket.setType(MessagePacketType.PAYLOADS_SUBMIT);
@@ -191,6 +189,16 @@ public class MessageServerHandler {
             return true;
         }
         return false;
+    }
+
+    // 处理其他节点的ProgramQueue请求
+    public synchronized MessagePacket responseProgramQueue() {
+        ArrayDeque<MutablePair<byte[], Peer>> programQueue = programService.getProgramQueue();
+        PacketBody packetBody = new PacketBody();
+        packetBody.setItem(programQueue);
+        packetBody.setSuccess(true);
+        MessagePacket messagePacket = buildPacket(MessagePacketType.PROGRAM_QUEUQ_RESP, packetBody, "成功");
+        return messagePacket;
     }
 
     private MessagePacket buildPacket(byte type, PacketBody packetBody, String message)

@@ -1,16 +1,21 @@
 package com.example.net.client;
 
 import com.example.base.entities.Block;
+import com.example.base.entities.Peer;
 import com.example.base.utils.SerializeUtils;
+import com.example.fuzzed.ProgramService;
 import com.example.net.base.PacketBody;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.GetBlockByHeightEvent;
 import com.example.web.service.ChainService;
 import com.example.web.service.ValidationService;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayDeque;
 
 // 处理其他 node 发送的response
 @Component
@@ -20,6 +25,7 @@ public class MessageClientHandler {
     private static final Logger logger = LoggerFactory.getLogger(MessageClientHandler.class);
     private final ChainService chainService;
     private final ValidationService validationService;
+    private final ProgramService programService;
 
     // 处理请求某高度区块时接收到的res
     public void receiveGetBlockByHeightRes(byte[] body) {
@@ -60,6 +66,12 @@ public class MessageClientHandler {
         if (validationService.storeChainHeight(height)) {
             logger.info("更新主链当前高度, {}", height);
         }
+    }
+
+    public void receiveProgramQueue(byte[] body) {
+        ArrayDeque<MutablePair<byte[], Peer>> programQueue =
+                (ArrayDeque<MutablePair<byte[], Peer>>) SerializeUtils.unSerialize(body);
+        programService.setProgramQueue(programQueue);
     }
 
 }

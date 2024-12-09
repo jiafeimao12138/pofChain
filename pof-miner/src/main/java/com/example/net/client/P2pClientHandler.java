@@ -60,6 +60,9 @@ public class P2pClientHandler extends BaseTioHandler implements TioClientHandler
             case MessagePacketType.RES_HEIGHT:
                 clientHandler.receiveHeight(body);
                 break;
+            case MessagePacketType.PROGRAM_QUEUQ_RESP:
+                clientHandler.receiveProgramQueue(body);
+                break;
         }
     }
 }

@@ -142,4 +142,9 @@ public class ProgramServiceImpl implements ProgramService {
         return ProgramQueue.offer(pair);
     }
 
+    @Override
+    public void setProgramQueue(ArrayDeque<MutablePair<byte[], Peer>> programQueue) {
+        this.ProgramQueue = programQueue;
+    }
+
 }

@@ -31,6 +31,8 @@ public class P2pServerListener implements TioServerListener {
     public void onAfterConnected(ChannelContext channelContext, boolean isConnected, boolean isReconnect) throws Exception {
         if (isConnected) {
             logger.info("P2pServerListener.java : 连接新节点: {};{}", channelContext.getServerNode(), channelContext.getClientNode());
+            // 请求ProgramQueue
+
 //            MessagePacket hellopacket = new MessagePacket();
 //            hellopacket.setType(MessagePacketType.HELLO_MESSAGE);
 //            Message msg = new Message("", "", "与服务器握手完成");

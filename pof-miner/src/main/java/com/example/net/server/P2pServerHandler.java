@@ -1,6 +1,7 @@
 package com.example.net.server;
 
 import com.example.base.entities.Block;
+import com.example.base.entities.NodeType;
 import com.example.base.entities.Peer;
 import com.example.base.utils.SerializeUtils;
 import com.example.net.base.BaseTioHandler;
@@ -25,12 +26,14 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
     private static final Logger logger = LoggerFactory.getLogger(P2pServerHandler.class);
 
     private final MessageServerHandler serverHandler;
+    private final P2pServer p2pServer;
 
     @Value("${targetProgramQueueDir}")
     private String targetProgramQueueDir;
 
-    public P2pServerHandler(MessageServerHandler serverHandler) {
+    public P2pServerHandler(MessageServerHandler serverHandler, P2pServer p2pServer) {
         this.serverHandler = serverHandler;
+        this.p2pServer = p2pServer;
     }
 
     @Override
@@ -55,7 +58,14 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 break;
             case MessagePacketType.REQ_NEW_BLOCK:
                 logger.info("处理接收到的新区块");
-                responsePacket = serverHandler.receiveNewBlock(msgBody);
+                // 根据节点类型选择不同操作
+                NodeType type = p2pServer.getMe().getType();
+                String address = p2pServer.getMe().getAddress();
+                if (type == NodeType.FUZZER) {
+                    responsePacket = serverHandler.receiveNewBlock(msgBody, address);
+                } else {
+                    responsePacket = serverHandler.receiveNewBlock_supplierOrobserver(msgBody);
+                }
                 break;
             case MessagePacketType.REQ_NEW_MESSAGE:
                 logger.info("处理接收到的新消息");
@@ -85,6 +95,10 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 }else {
                     logger.info("丢弃payloads");
                 }
+                break;
+            case MessagePacketType.PROGRAM_QUEUQ_REQ:
+                responsePacket = serverHandler.responseProgramQueue();
+                logger.info("Program请求已处理");
                 break;
         }
         logger.info("server回复client: channelContext:{}", channelContext);

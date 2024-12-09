@@ -35,4 +35,7 @@ public interface MessagePacketType
     byte NEW_PATH_RANK = 9;
     // fuzzer向supplier提交payloads
     byte PAYLOADS_SUBMIT = 10;
+    // 新节点连接后请求ProgramQueue
+    byte PROGRAM_QUEUQ_REQ = 11;
+    byte PROGRAM_QUEUQ_RESP = -11;
 }

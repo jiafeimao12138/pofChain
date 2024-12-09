@@ -16,4 +16,5 @@ public interface ProgramService {
     String chooseTargetProgram(String dirPath);
     ArrayDeque<MutablePair<byte[], Peer>> getProgramQueue();
     boolean addProgramQueue(MutablePair<byte[], Peer> pair);
+    void setProgramQueue(ArrayDeque<MutablePair<byte[], Peer>> programQueue);
 }
