@@ -6,6 +6,7 @@ import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.GetBlocksEvent;
+import com.example.net.events.GetProgramQueue;
 import com.example.web.service.ChainService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,7 @@ public class P2pServerListener implements TioServerListener {
         if (isConnected) {
             logger.info("P2pServerListener.java : 连接新节点: {};{}", channelContext.getServerNode(), channelContext.getClientNode());
             // 请求ProgramQueue
-
+            ApplicationContextProvider.publishEvent(new GetProgramQueue(0));
 //            MessagePacket hellopacket = new MessagePacket();
 //            hellopacket.setType(MessagePacketType.HELLO_MESSAGE);
 //            Message msg = new Message("", "", "与服务器握手完成");

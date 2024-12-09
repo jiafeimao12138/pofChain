@@ -18,6 +18,7 @@ import com.example.web.service.MiningService;
 import com.example.web.service.PeerService;
 import com.example.web.service.ValidationService;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,9 +61,6 @@ public class MiningServiceImpl implements MiningService {
     private final Payloads payloads;
     private List<Payload> triples;
 
-    private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
-    private final Lock readLock = rwl.readLock();
-    private final Lock writeLock = rwl.writeLock();
     private int hitCount = 0;
     long endWindow = 0;
     long lastWindowEnd = System.currentTimeMillis();
@@ -78,11 +76,14 @@ public class MiningServiceImpl implements MiningService {
         new Thread(() -> {
             logger.info("开始进行新一轮Fuzzing挖矿");
             try {
-                String tobeFuzzedPath = programService.chooseTargetProgram(targetProgramQueueDir);
+                Pair<String, Peer> pair = programService.chooseTargetProgram(targetProgramQueueDir);
+                String tobeFuzzedPath = pair.getLeft();
+                Peer supplier = pair.getRight();
                 if (tobeFuzzedPath == null) {
                     logger.info("待测程序队列为空，当前无待测程序");
+                } else {
+                    executeCommand(tobeFuzzedPath, supplier);
                 }
-                executeCommand(tobeFuzzedPath, peerService.getSupplierPeer());
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -140,7 +141,7 @@ public class MiningServiceImpl implements MiningService {
                         logger.info("新区块中的payload长度为：{}", newBlock.getBlockHeader().getTriples().size());
                         // 当命中区间
                         if(isInInterval(newHash, head, end)) {
-                            whenmined(newBlock, newHash);
+                            whenmined(newBlock, newHash, supplier);
                         } else {
                             Files.write(path, "not hit".getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
                         }
@@ -197,7 +198,7 @@ public class MiningServiceImpl implements MiningService {
     }
 
     // 当寻找到满足要求的区块后
-    public void whenmined(Block newBlock, String newHash) throws IOException {
+    public void whenmined(Block newBlock, String newHash, Peer supplier) throws IOException {
         hitCount ++;
         logger.info("挖矿成功，新区块高度为{}，hash={}，前一个区块hash={}",
                 newBlock.getBlockHeader().getHeight(), newHash,newBlock.getBlockHeader().getHashPreBlock());
@@ -220,7 +221,6 @@ public class MiningServiceImpl implements MiningService {
             messagePacket.setType(MessagePacketType.PAYLOADS_SUBMIT);
             messagePacket.setBody(SerializeUtils.serialize(payloads));
             // 发送给supplier
-            Peer supplier = peerService.getSupplierPeer();
             List<ClientChannelContext> channelContextList = p2pClient.getChannelContextList();
             // 在维护的列表中查找supplier
             for (ClientChannelContext channelContext : channelContextList) {

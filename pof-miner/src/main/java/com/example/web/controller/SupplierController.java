@@ -1,6 +1,7 @@
 package com.example.web.controller;
 
 import com.example.base.entities.Message;
+import com.example.base.entities.Node;
 import com.example.base.entities.NodeType;
 import com.example.fuzzed.ProgramService;
 import com.example.net.server.P2pServer;
@@ -18,7 +19,7 @@ public class SupplierController {
 
     private final MessageService messageService;
     private final ProgramService programService;
-    private final P2pServer p2pServer;
+    private final Node node;
 
     @RequestMapping("/publishMsg")
     public void publishMsg(){
@@ -27,10 +28,9 @@ public class SupplierController {
 
     @RequestMapping("/publishFile")
     public void publishFile() {
-        p2pServer.setMeType(NodeType.SUPPLIER);
-        logger.info("node: {}", p2pServer.getMe());
+        node.setType(NodeType.SUPPLIER);
+        logger.info("node:{}", node);
         programService.prepareTargetProgram("/home/wj/pofChain/AFL/afl_testfiles/test_afl_files/string_length.c",
                 "/home/wj/pofChain/AFL/afl_testfiles/objfiles/string_length_publish");
     }
-
 }

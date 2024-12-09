@@ -1,16 +1,17 @@
 package com.example.base.entities;
 
+import com.example.base.utils.CryptoUtils;
 import org.springframework.stereotype.Component;
 
-@Component
+import java.util.Random;
+
 public class Node {
     // 节点地址
-    private String address;
+    private String address = CryptoUtils.SHA256(new Random().toString());
     // 节点类型，默认为observer
     private NodeType type = NodeType.OBSERVER;
 
     public Node() {
-
     }
 
     public Node(String address) {

@@ -1,8 +1,6 @@
 package com.example.net.server;
 
 import com.example.base.entities.Node;
-import com.example.base.entities.NodeType;
-import com.example.base.utils.CryptoUtils;
 import com.example.net.conf.P2pNetConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +11,7 @@ import org.tio.server.TioServerConfig;
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 
-// 启动 p2pserver
+// 启动 server
 @Component
 public class P2pServer {
     private static final Logger logger = LoggerFactory.getLogger(P2pServer.class);
@@ -32,18 +30,9 @@ public class P2pServer {
 
     @PostConstruct
     public void start() throws IOException {
-        String address = CryptoUtils.SHA256(p2pNetConfig.getServerAddress() + p2pNetConfig.getServerPort());
-        me.setAddress(address);
-        logger.info("Node: {}", me);
         TioServer tioServer = new TioServer(tioServerConfig);
         tioServer.start(p2pNetConfig.getServerAddress(), p2pNetConfig.getServerPort());
+        logger.info("node: {}", me);
     }
 
-    public Node getMe() {
-        return me;
-    }
-
-    public void setMeType(NodeType nodeType) {
-        me.setType(nodeType);
-    }
 }

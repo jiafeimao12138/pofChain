@@ -61,6 +61,7 @@ public class ProgramServiceImpl implements ProgramService {
             MutablePair<byte[], Peer> pair = new MutablePair<>(fileBytes,
                     new Peer(p2pNetConfig.getServerAddress(), p2pNetConfig.getServerPort()));
             ApplicationContextProvider.publishEvent(new NewTargetProgramEvent(pair));
+            addProgramQueue(pair);
             logger.info("已广播待测可执行文件：{}, 长度:{}, Node:{}", file.getName(), fileBytes.length, pair.getRight());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -100,7 +101,7 @@ public class ProgramServiceImpl implements ProgramService {
     }
 
     @Override
-    public String chooseTargetProgram(String directorypath) {
+    public Pair<String, Peer> chooseTargetProgram(String directorypath) {
         // 选择队列头并弹出
         if (!ProgramQueue.isEmpty()) {
             MutablePair<byte[], Peer> pair = ProgramQueue.pop();
@@ -111,7 +112,9 @@ public class ProgramServiceImpl implements ProgramService {
             }
             String fileName = "Program_";
             // 返回待测程序的路径
-            return byteToFile(fileBytes, directorypath, fileName);
+            String path = byteToFile(fileBytes, directorypath, fileName);
+            Pair<String, Peer> programInfo = new ImmutablePair<>(path, node);
+            return programInfo;
         }
         return null;
     }

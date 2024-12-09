@@ -69,8 +69,9 @@ public class MessageClientHandler {
     }
 
     public void receiveProgramQueue(byte[] body) {
+        PacketBody packetBody = (PacketBody) SerializeUtils.unSerialize(body);
         ArrayDeque<MutablePair<byte[], Peer>> programQueue =
-                (ArrayDeque<MutablePair<byte[], Peer>>) SerializeUtils.unSerialize(body);
+                (ArrayDeque<MutablePair<byte[], Peer>>) packetBody.getItem();
         programService.setProgramQueue(programQueue);
     }
 

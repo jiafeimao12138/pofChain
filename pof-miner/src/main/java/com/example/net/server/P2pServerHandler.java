@@ -1,6 +1,7 @@
 package com.example.net.server;
 
 import com.example.base.entities.Block;
+import com.example.base.entities.Node;
 import com.example.base.entities.NodeType;
 import com.example.base.entities.Peer;
 import com.example.base.utils.SerializeUtils;
@@ -10,15 +11,17 @@ import com.example.net.base.MessagePacketType;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.tio.core.ChannelContext;
-import org.tio.core.Node;
 import org.tio.core.Tio;
 import org.tio.core.intf.Packet;
 import org.tio.server.intf.TioServerHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Resource;
 
 @Component
 public class P2pServerHandler extends BaseTioHandler implements TioServerHandler {
@@ -26,14 +29,14 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
     private static final Logger logger = LoggerFactory.getLogger(P2pServerHandler.class);
 
     private final MessageServerHandler serverHandler;
-    private final P2pServer p2pServer;
+    private final Node node;
 
     @Value("${targetProgramQueueDir}")
     private String targetProgramQueueDir;
 
-    public P2pServerHandler(MessageServerHandler serverHandler, P2pServer p2pServer) {
+    public P2pServerHandler(MessageServerHandler serverHandler, Node node) {
         this.serverHandler = serverHandler;
-        this.p2pServer = p2pServer;
+        this.node = node;
     }
 
     @Override
@@ -59,8 +62,8 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
             case MessagePacketType.REQ_NEW_BLOCK:
                 logger.info("处理接收到的新区块");
                 // 根据节点类型选择不同操作
-                NodeType type = p2pServer.getMe().getType();
-                String address = p2pServer.getMe().getAddress();
+                NodeType type = node.getType();
+                String address = node.getAddress();
                 if (type == NodeType.FUZZER) {
                     responsePacket = serverHandler.receiveNewBlock(msgBody, address);
                 } else {
@@ -98,7 +101,7 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 break;
             case MessagePacketType.PROGRAM_QUEUQ_REQ:
                 responsePacket = serverHandler.responseProgramQueue();
-                logger.info("Program请求已处理");
+                logger.info("ProgramQueue请求已处理");
                 break;
         }
         logger.info("server回复client: channelContext:{}", channelContext);

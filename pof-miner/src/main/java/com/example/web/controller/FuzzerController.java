@@ -1,6 +1,7 @@
 package com.example.web.controller;
 
 import com.example.base.entities.Block;
+import com.example.base.entities.Node;
 import com.example.base.entities.NodeType;
 import com.example.net.server.P2pServer;
 import com.example.web.service.ChainService;
@@ -24,12 +25,11 @@ public class FuzzerController {
 
     private final MiningService miningService;
     private final ChainService chainService;
-    private final P2pServer p2pServer;
+    private final Node node;
 
     @RequestMapping("startmining")
     public void mine() {
-        p2pServer.setMeType(NodeType.FUZZER);
-        logger.info("node: {}", p2pServer.getMe());
+        node.setType(NodeType.FUZZER);
         if (miningService.AFLswitchRoot()){
             miningService.startMining();
         }
