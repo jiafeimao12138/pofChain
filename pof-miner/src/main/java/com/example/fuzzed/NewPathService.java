@@ -12,6 +12,6 @@ public interface NewPathService {
     List<NewPath> ProcessPayloads(List<Payload> payloads, long timestamp, String fuzzerAddress);
     // supplier产生本轮挖矿的新路径贡献度排名
     void NewPathContributionRank(List<NewPath> markedNewPaths);
-    HashMap<String, MutablePair<List<NewPath>, Long>> getNewPathMap();
+    HashMap<String, List<NewPath>> getNewPathMap();
     void addNewPathMap(String address, long timestamp, List<NewPath> newPaths);
 }

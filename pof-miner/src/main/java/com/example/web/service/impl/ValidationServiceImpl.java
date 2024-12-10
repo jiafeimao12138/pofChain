@@ -59,7 +59,7 @@ public class ValidationServiceImpl implements ValidationService {
         }
     }
 
-    // 校验新区块合法性
+    // fuzzer和observer校验新区块合法性
     @Override
     public boolean checkBlock(Block block) {
         long height = block.getBlockHeader().getHeight();
@@ -137,8 +137,14 @@ public class ValidationServiceImpl implements ValidationService {
     @Override
     public boolean supplierCheckNewBlock(Block block) {
         Block latestBlock = chainService.getLocalLatestBlock();
-        if (latestBlock.equals(block))
+        if (latestBlock.getHash().equals(block.getHash())){
             return true;
+        }
+        //如果该区块和本地区块链的不一样，进一步校验
+        if (latestBlock.getBlockHeader().getHeight() == block.getBlockHeader().getHeight() - 1) {
+            // @TODO 申请同步区块
+
+        }
         return false;
     }
 }

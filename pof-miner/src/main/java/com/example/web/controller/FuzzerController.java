@@ -7,10 +7,17 @@ import com.example.net.server.P2pServer;
 import com.example.web.service.ChainService;
 import com.example.web.service.MiningService;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.checkerframework.checker.units.qual.N;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author jiafeimao
@@ -26,12 +33,65 @@ public class FuzzerController {
     private final MiningService miningService;
     private final ChainService chainService;
     private final Node node;
+    private String fuzzingprocessId = "";
 
-    @RequestMapping("startmining")
+    @RequestMapping("startFuzzing")
     public void mine() {
-        node.setType(NodeType.FUZZER);
-        if (miningService.AFLswitchRoot()){
-            miningService.startMining();
+        if (node.getType() == NodeType.SUPPLIER) {
+            logger.info("supplier不允许fuzzing");
+        } else {
+            node.setType(NodeType.FUZZER);
+            if (miningService.AFLswitchRoot()){
+                miningService.startMining();
+            }
+        }
+    }
+
+    // 挂起Fuzzing进程
+    @RequestMapping("suspendFuzzing")
+    public void suspendFuzzing() {
+        try {
+            List<String> processIds = findProcessIds("afl-fuzz");
+            logger.info("suspendFuzzing processIds: {}", processIds);
+            if (processIds.size() > 1) {
+                logger.error("fuzzing进程数大于1");
+            }else {
+                fuzzingprocessId = processIds.get(0);
+                suspendProcess(fuzzingprocessId);
+                logger.info("已挂起，进程号{}", fuzzingprocessId);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    //停止Fuzzing进程
+    @RequestMapping("stopFuzzing")
+    public void stopFuzzing() {
+        node.setType(NodeType.OBSERVER);
+        try {
+            List<String> processIds = findProcessIds("afl-fuzz");
+            logger.info("suspendFuzzing processIds: {}", processIds);
+            if (processIds.size() > 1) {
+                logger.error("fuzzing进程数大于1");
+            }else {
+                fuzzingprocessId = processIds.get(0);
+                stopProcess(fuzzingprocessId);
+                logger.info("已杀死Fuzzing进程，进程号{}", fuzzingprocessId);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    // 恢复Fuzzing进程
+    @RequestMapping("resumeFuzzing")
+    public void resumeFuzzing() {
+        try {
+            resumeProcess(fuzzingprocessId);
+            logger.info("已恢复Fuzzing，进程号{}",fuzzingprocessId);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -60,5 +120,47 @@ public class FuzzerController {
             System.out.println("=================");
         }
 
+    }
+
+    private static List<String> findProcessIds(String partialName) throws Exception {
+        List<String> pids = new ArrayList<>();
+        String line;
+        ProcessBuilder builder = new ProcessBuilder("sh", "-c", "ps -aux | grep " + partialName + " | grep -v grep");
+        Process process = builder.start();
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            while ((line = reader.readLine()) != null) {
+                // 解析输出，获取PID
+                String[] parts = line.trim().split("\\s+");
+                if (parts.length > 1) {
+                    pids.add(parts[1]); // PID是第二列
+                }
+            }
+        }
+        return pids;
+    }
+
+    private static void suspendProcess(String pid) throws Exception {
+        ProcessBuilder builder = new ProcessBuilder("kill", "-STOP", pid);
+        builder.start().waitFor();
+    }
+
+    private static void resumeProcess(String pid) throws Exception {
+        ProcessBuilder builder = new ProcessBuilder("kill", "-CONT", pid);
+        builder.start().waitFor();
+    }
+
+    private static void stopProcess(String pid) throws Exception {
+        ProcessBuilder builder = new ProcessBuilder("kill", "-9", pid);
+        builder.start().waitFor();
+    }
+
+    public static void main(String[] args) {
+        try {
+            List<String> processIds = findProcessIds("afl-fuzz");
+            System.out.println(processIds);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

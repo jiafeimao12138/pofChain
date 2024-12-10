@@ -51,10 +51,8 @@ public class MiningServiceImpl implements MiningService {
 
     private static final Logger logger = LoggerFactory.getLogger(MiningServiceImpl.class);
 
-    private final DBStore rocksDBStore;
     private final ChainService chainService;
     private final ProgramService programService;
-    private final PeerService peerService;
     private final ValidationService validationService;
     private final P2pClient p2pClient;
     // 存储中间值
@@ -92,7 +90,7 @@ public class MiningServiceImpl implements MiningService {
 
     public void executeCommand(String targetProgram, Peer supplier) {
         //区间
-        List<BigInteger> interval = generateRandomHashHead(6);
+        List<BigInteger> interval = generateRandomHashHead(5);
         BigInteger head = interval.get(0);
         BigInteger end = interval.get(1);
         try {
@@ -135,13 +133,20 @@ public class MiningServiceImpl implements MiningService {
 //                            logger.info("本次清理完毕, num={}", num);
                         }
                         Block preBlock = chainService.getLocalLatestBlock();
+                        logger.info("本次计算区块hash的preBlock：高度为{}, Hash为{}", preBlock.getBlockHeader().getHeight(), preBlock.getHash());
                         Block newBlock = computeWindowHash(preBlock, transactions, triples);
                         String newHash = newBlock.getHash();
 
                         logger.info("新区块中的payload长度为：{}", newBlock.getBlockHeader().getTriples().size());
                         // 当命中区间
                         if(isInInterval(newHash, head, end)) {
-                            whenmined(newBlock, newHash, supplier);
+                            // 挖矿成功，并且提交payloads
+                            if (whenmined(newBlock, newHash, supplier)) {
+                                logger.info("挖矿成功，并且提交payloads");
+
+                            } else {
+                                logger.info("失败");
+                            }
                         } else {
                             Files.write(path, "not hit".getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
                         }
@@ -198,7 +203,7 @@ public class MiningServiceImpl implements MiningService {
     }
 
     // 当寻找到满足要求的区块后
-    public void whenmined(Block newBlock, String newHash, Peer supplier) throws IOException {
+    public boolean whenmined(Block newBlock, String newHash, Peer supplier) throws IOException {
         hitCount ++;
         logger.info("挖矿成功，新区块高度为{}，hash={}，前一个区块hash={}",
                 newBlock.getBlockHeader().getHeight(), newHash,newBlock.getBlockHeader().getHashPreBlock());
@@ -229,6 +234,7 @@ public class MiningServiceImpl implements MiningService {
                     // supplier在列表中，直接发送消息即可
                     p2pClient.sendToNode(channelContext, messagePacket);
                     payloads.setNull();
+                    return true;
                 }
             }
             // 如果没查到，重新连接
@@ -236,10 +242,12 @@ public class MiningServiceImpl implements MiningService {
                 ClientChannelContext channelContext = p2pClient.connect(new Node(supplier.getIp(), supplier.getPort()));
                 p2pClient.sendToNode(channelContext, messagePacket);
                 payloads.setNull();
+                return true;
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
+        return false;
     }
     
     @Override

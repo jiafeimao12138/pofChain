@@ -1,6 +1,7 @@
 package com.example.base.entities;
 
 import lombok.Data;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 

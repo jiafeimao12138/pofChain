@@ -4,6 +4,7 @@ import com.example.base.entities.*;
 import com.example.base.utils.SerializeUtils;
 import com.example.fuzzed.NewPathService;
 import com.example.fuzzed.ProgramService;
+import com.example.miner.chain.Chain;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
 import com.example.net.base.PacketBody;
@@ -65,6 +66,10 @@ public class MessageServerHandler {
     //fuzzer处理接收到的新区块
     public synchronized MessagePacket receiveNewBlock(byte[] msgBody, String address) {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
+        // 先检查该区块是否本地已存在
+        if (chainService.getBlockByHash(newBlock.getHash()) != null) {
+            return null;
+        }
         if (!validationService.processNewMinedBlock(newBlock)) {
             logger.info("校验新区块失败, hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
             return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, false), "校验新区块失败");
@@ -105,6 +110,10 @@ public class MessageServerHandler {
     // supplier或者observer处理接收到的新节点，不需要提交payloads
     public synchronized MessagePacket receiveNewBlock_supplierOrobserver(byte[] msgBody){
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
+        // 先检查该区块是否本地已存在
+        if (chainService.getBlockByHash(newBlock.getHash()) != null) {
+            return null;
+        }
         if (!validationService.processNewMinedBlock(newBlock)) {
             logger.info("校验新区块失败, hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
             return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, false), "校验新区块失败");
@@ -178,12 +187,13 @@ public class MessageServerHandler {
         Block newBlock = payloads.getNewBlock();
         // 先校验newBlock
         if(validationService.supplierCheckNewBlock(newBlock)) {
+            logger.info("通过supplier校验，开始筛选NewPath");
             List<NewPath> newPaths = newPathService.ProcessPayloads(pathList, timestamp, address);
             // 添加到NewPathMap中，等待排名
             newPathService.addNewPathMap(address, timestamp, newPaths);
-            HashMap<String, MutablePair<List<NewPath>, Long>> newPathMap = newPathService.getNewPathMap();
-            logger.info("NewPathMap:");
-            for (Map.Entry<String, MutablePair<List<NewPath>, Long>> entry : newPathMap.entrySet()) {
+            HashMap<String, List<NewPath>> newPathMap = newPathService.getNewPathMap();
+            logger.info("NewPathMap: size={}", newPathMap.size());
+            for (Map.Entry<String, List<NewPath>> entry : newPathMap.entrySet()) {
                 System.out.println(entry.getKey() + ":" + entry.getValue());
             }
             return true;

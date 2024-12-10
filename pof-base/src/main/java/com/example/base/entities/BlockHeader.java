@@ -23,7 +23,14 @@ public class BlockHeader {
     }
 
 
-    public BlockHeader(int nVersion, String hashPreBlock, String hashMerkleRoot, long height, long nTime, long nNonce, int nBits, List<Payload> triples) {
+    public BlockHeader(int nVersion,
+                       String hashPreBlock,
+                       String hashMerkleRoot,
+                       long height,
+                       long nTime,
+                       long nNonce,
+                       int nBits,
+                       List<Payload> triples) {
         this.nVersion = nVersion;
         this.hashPreBlock = hashPreBlock;
         this.hashMerkleRoot = hashMerkleRoot;
