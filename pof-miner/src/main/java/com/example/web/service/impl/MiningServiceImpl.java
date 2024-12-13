@@ -3,8 +3,6 @@ package com.example.web.service.impl;
 
 import com.example.base.Exception.WindowFileException;
 import com.example.base.entities.*;
-import com.example.base.store.BlockPrefix;
-import com.example.base.store.DBStore;
 import com.example.base.utils.SerializeUtils;
 import com.example.base.utils.WindowFileUtils;
 import com.example.fuzzed.ProgramService;
@@ -12,20 +10,23 @@ import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
 import com.example.net.client.P2pClient;
 import com.example.net.conf.ApplicationContextProvider;
+import com.example.net.events.GetProgramQueue;
 import com.example.net.events.NewBlockEvent;
 import com.example.web.service.ChainService;
 import com.example.web.service.MiningService;
-import com.example.web.service.PeerService;
 import com.example.web.service.ValidationService;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 import org.tio.client.ClientChannelContext;
 import org.tio.core.Node;
 
+import javax.annotation.PostConstruct;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -37,8 +38,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @author jiafeimao
@@ -47,6 +46,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Service
 @RequiredArgsConstructor
+@PropertySource("classpath:application.properties")
 public class MiningServiceImpl implements MiningService {
 
     private static final Logger logger = LoggerFactory.getLogger(MiningServiceImpl.class);
@@ -57,7 +57,9 @@ public class MiningServiceImpl implements MiningService {
     private final P2pClient p2pClient;
     // 存储中间值
     private final Payloads payloads;
+    private final ProgramQueue programQueue;
     private List<Payload> triples;
+    private final com.example.base.entities.Node node1;
 
     private int hitCount = 0;
     long endWindow = 0;
@@ -65,21 +67,47 @@ public class MiningServiceImpl implements MiningService {
 
     @Value("${targetProgramQueueDir}")
     private String targetProgramQueueDir;
+    @Value("${fuzzer.fuzz_out}")
+    private String fuzzOut;
+    @Value("${fuzzer.fuzz_in}")
+    private String fuzzIn;
+    @Value("${fuzzer.windowFiles}")
+    private String windowFiles;
+    @Value("${fuzzer.output}")
+    private String output;
+    @Value("${afl.directory}")
+    private String aflDirectory;
 
-    Path path = Paths.get("output.txt");
+    Path path = null;
     //TODO: 每挖出x个区块更改一次head，类比bitcoin
+    @PostConstruct
+    public void readProperties() {
+        System.out.println("readProperties");
+        System.out.println(fuzzOut);
+        System.out.println(fuzzIn);
+        System.out.println(windowFiles);
+        System.out.println(output);
+        System.out.println(aflDirectory);
+    }
 
     @Override
     public void startMining() {
+        path = Paths.get(output);
+        if (!deleteAFLFiles()) {
+            logger.info("删除AFL文件错误");
+            return;
+        }
         new Thread(() -> {
-            logger.info("开始进行新一轮Fuzzing挖矿");
+            logger.info("开始进行Fuzzing挖矿");
             try {
-                Pair<String, Peer> pair = programService.chooseTargetProgram(targetProgramQueueDir);
-                String tobeFuzzedPath = pair.getLeft();
-                Peer supplier = pair.getRight();
-                if (tobeFuzzedPath == null) {
+                Pair<String, Peer> targetProgram;
+                ArrayDeque<MutablePair<byte[], Peer>> queue = programQueue.getProgramQueue();
+                targetProgram = programService.chooseTargetProgram(targetProgramQueueDir, queue);
+                if (targetProgram == null) {
                     logger.info("待测程序队列为空，当前无待测程序");
                 } else {
+                    String tobeFuzzedPath = targetProgram.getLeft();
+                    Peer supplier = targetProgram.getRight();
                     executeCommand(tobeFuzzedPath, supplier);
                 }
             } catch (Exception e) {
@@ -102,8 +130,9 @@ public class MiningServiceImpl implements MiningService {
 
         ProcessBuilder processBuilder = new ProcessBuilder();
 //        指定工作目录
-        processBuilder.directory(new java.io.File("/home/wj/pofChain/AFL"));
-        processBuilder.command("afl-fuzz", "-i", "fuzz_in/", "-o", "fuzz_out", targetProgram);
+        processBuilder.directory(new java.io.File(aflDirectory));
+        String fuzzOutDir = fuzzOut + node1.getAddress().substring(0,6);
+        processBuilder.command("afl-fuzz", "-i", fuzzIn , "-o", fuzzOutDir , targetProgram);
 
         try {
             Process process = processBuilder.start();
@@ -119,16 +148,16 @@ public class MiningServiceImpl implements MiningService {
                     List<Transaction> transactions = new ArrayList<>();
                     try {
                         triples = WindowFileUtils.windowFilesToTriple(
-                                "/home/wj/pofChain/AFL/afl_testfiles/window_testcases/testcase_" + num,
-                                "/home/wj/pofChain/AFL/afl_testfiles/window_paths/testfile_" + num);
+                                windowFiles + "/window_testcases/testcase_" + num,
+                                windowFiles + "/window_paths/testfile_" + num);
                         // 向中间值添加本轮挖矿的path信息，等到新区块成功挖出后再置空
                         payloads.addPayloads(triples);
                         logger.info("本次处理文件num={}", num);
                         // 每20个文件清理一次
                         if(num % 20 == 1) {
                             for (int i = 1; i <= 20; i++) {
-                                deleteFile("/home/wj/pofChain/AFL/afl_testfiles/window_testcases/testcase_" + (num- 21 + i));
-                                deleteFile("/home/wj/pofChain/AFL/afl_testfiles/window_paths/testfile_" + (num- 21 + i));
+                                deleteFile(windowFiles + "/window_testcases/testcase_" + (num- 21 + i));
+                                deleteFile(windowFiles + "/window_paths/testfile_" + (num- 21 + i));
                             }
 //                            logger.info("本次清理完毕, num={}", num);
                         }
@@ -203,7 +232,7 @@ public class MiningServiceImpl implements MiningService {
     }
 
     // 当寻找到满足要求的区块后
-    public boolean whenmined(Block newBlock, String newHash, Peer supplier) throws IOException {
+    public boolean whenmined(Block newBlock, String newHash, Peer supplier) throws IOException, InterruptedException {
         hitCount ++;
         logger.info("挖矿成功，新区块高度为{}，hash={}，前一个区块hash={}",
                 newBlock.getBlockHeader().getHeight(), newHash,newBlock.getBlockHeader().getHashPreBlock());
@@ -220,7 +249,7 @@ public class MiningServiceImpl implements MiningService {
             // 提交给supplier
             payloads.setNewBlock(newBlock);
             // @TODO: fuzzerAddress获取
-            String address = "";
+            String address = node1.getAddress();
             payloads.setAddress(address);
             MessagePacket messagePacket = new MessagePacket();
             messagePacket.setType(MessagePacketType.PAYLOADS_SUBMIT);
@@ -232,8 +261,11 @@ public class MiningServiceImpl implements MiningService {
                 Node serverNode = channelContext.getServerNode();
                 if (serverNode.getIp().equals(supplier.getIp()) && serverNode.getPort() == supplier.getPort()) {
                     // supplier在列表中，直接发送消息即可
+                    logger.info("提交之前payloads：{}", payloads.getPayloads().size());
                     p2pClient.sendToNode(channelContext, messagePacket);
                     payloads.setNull();
+                    logger.info("提交之后payloads：{}", payloads.getPayloads().size());
+                    Thread.sleep(2000);
                     return true;
                 }
             }
@@ -291,6 +323,20 @@ public class MiningServiceImpl implements MiningService {
         } else {
             return false;
         }
+    }
+
+    public boolean deleteAFLFiles() {
+        try {
+            ProcessBuilder processBuilder = new ProcessBuilder();
+            processBuilder.command("./deleteAFLfiles.sh");
+            Process process = processBuilder.start();
+            int exitCode = process.waitFor();
+            System.out.println("Exited with code: " + exitCode);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     public List<BigInteger> generateRandomHashHead(int bit) {

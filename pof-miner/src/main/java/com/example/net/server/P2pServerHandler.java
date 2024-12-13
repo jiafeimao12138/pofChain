@@ -66,8 +66,10 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 String address = node.getAddress();
                 if (type == NodeType.FUZZER) {
                     responsePacket = serverHandler.receiveNewBlock(msgBody, address);
+                } else if (type == NodeType.OBSERVER){
+                    responsePacket = serverHandler.receiveNewBlock_observer(msgBody);
                 } else {
-                    responsePacket = serverHandler.receiveNewBlock_supplierOrobserver(msgBody);
+                    responsePacket = serverHandler.receiveNewBlock_supplier(msgBody);
                 }
                 break;
             case MessagePacketType.REQ_NEW_MESSAGE:

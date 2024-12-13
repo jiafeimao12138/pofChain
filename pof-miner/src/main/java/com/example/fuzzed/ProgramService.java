@@ -13,8 +13,6 @@ public interface ProgramService {
 
     boolean prepareTargetProgram(String path, String objPath);
     String byteToFile(byte[] fileBytes, String path, String name);
-    Pair<String, Peer> chooseTargetProgram(String dirPath);
-    ArrayDeque<MutablePair<byte[], Peer>> getProgramQueue();
-    boolean addProgramQueue(MutablePair<byte[], Peer> pair);
-    void setProgramQueue(ArrayDeque<MutablePair<byte[], Peer>> programQueue);
+    Pair<String, Peer> chooseTargetProgram(String dirPath, ArrayDeque<MutablePair<byte[], Peer>> queue);
+
 }

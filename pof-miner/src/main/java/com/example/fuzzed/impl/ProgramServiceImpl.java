@@ -1,24 +1,20 @@
 package com.example.fuzzed.impl;
 
 import com.example.base.entities.Peer;
-import com.example.base.store.DBStore;
+import com.example.base.entities.ProgramQueue;
 import com.example.fuzzed.ProgramService;
-import com.example.net.client.P2pClient;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.conf.P2pNetConfig;
+import com.example.net.events.GetProgramQueue;
 import com.example.net.events.NewTargetProgramEvent;
 import com.example.web.service.PeerService;
-import com.sun.jmx.remote.internal.ArrayQueue;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.tio.core.Node;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -26,7 +22,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayDeque;
 
@@ -37,11 +32,11 @@ public class ProgramServiceImpl implements ProgramService {
     private static final Logger logger = LoggerFactory.getLogger(ProgramServiceImpl.class);
     private final P2pNetConfig p2pNetConfig;
     private final PeerService peerService;
-    private final DBStore dbStore;
     // 待测程序队列，队列头为下一次fuzzing的程序
-    ArrayDeque <MutablePair<byte[], Peer>> ProgramQueue = new ArrayDeque<>(16);
+    private final ProgramQueue programQueue;
+    private final int MAX_REQ = 10;
 
-    // 将待测程序转换为目标可执行文件
+    // supplier 将待测程序转换为目标可执行文件
     @Override
     public boolean prepareTargetProgram(String path, String objPath) {
 
@@ -61,7 +56,7 @@ public class ProgramServiceImpl implements ProgramService {
             MutablePair<byte[], Peer> pair = new MutablePair<>(fileBytes,
                     new Peer(p2pNetConfig.getServerAddress(), p2pNetConfig.getServerPort()));
             ApplicationContextProvider.publishEvent(new NewTargetProgramEvent(pair));
-            addProgramQueue(pair);
+            programQueue.addProgramQueue(pair);
             logger.info("已广播待测可执行文件：{}, 长度:{}, Node:{}", file.getName(), fileBytes.length, pair.getRight());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -71,7 +66,7 @@ public class ProgramServiceImpl implements ProgramService {
         return true;
     }
 
-    // 将接收到的byte[]转换为file，准备fuzz
+    // fuzzer 将接收到的byte[]转换为file，准备fuzz
     @Override
     public String byteToFile(byte[] fileBytes, String path, String name) {
         String absolutePath = path + name + System.currentTimeMillis();
@@ -101,22 +96,22 @@ public class ProgramServiceImpl implements ProgramService {
     }
 
     @Override
-    public Pair<String, Peer> chooseTargetProgram(String directorypath) {
-        // 选择队列头并弹出
-        if (!ProgramQueue.isEmpty()) {
-            MutablePair<byte[], Peer> pair = ProgramQueue.pop();
-            byte[] fileBytes = pair.getLeft();
-            Peer node = pair.getRight();
-            if (!peerService.addSupplierPeer(node)) {
-                logger.info("更新supplier失败");
-            }
-            String fileName = "Program_";
-            // 返回待测程序的路径
-            String path = byteToFile(fileBytes, directorypath, fileName);
-            Pair<String, Peer> programInfo = new ImmutablePair<>(path, node);
-            return programInfo;
+    public Pair<String, Peer> chooseTargetProgram(String directorypath, ArrayDeque<MutablePair<byte[], Peer>> queue) {
+        if (queue.isEmpty()) {
+            return null;
         }
-        return null;
+        // 选择队列头并弹出
+        MutablePair<byte[], Peer> pair = queue.pop();
+        byte[] fileBytes = pair.getLeft();
+        Peer node = pair.getRight();
+        if (!peerService.addSupplierPeer(node)) {
+            logger.info("更新supplier失败");
+        }
+        String fileName = "Program_";
+        // 返回待测程序的路径
+        String path = byteToFile(fileBytes, directorypath, fileName);
+        Pair<String, Peer> programInfo = new ImmutablePair<>(path, node);
+        return programInfo;
     }
 
     private Path findOldestFile(Path directory) throws IOException {
@@ -135,19 +130,5 @@ public class ProgramServiceImpl implements ProgramService {
                 .orElse(null); // 如果没有文件，返回 null
     }
 
-    @Override
-    public ArrayDeque<MutablePair<byte[], Peer>> getProgramQueue() {
-        return ProgramQueue;
-    }
-
-    @Override
-    public boolean addProgramQueue(MutablePair<byte[], Peer> pair) {
-        return ProgramQueue.offer(pair);
-    }
-
-    @Override
-    public void setProgramQueue(ArrayDeque<MutablePair<byte[], Peer>> programQueue) {
-        this.ProgramQueue = programQueue;
-    }
 
 }

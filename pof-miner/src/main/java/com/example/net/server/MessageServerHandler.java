@@ -4,7 +4,6 @@ import com.example.base.entities.*;
 import com.example.base.utils.SerializeUtils;
 import com.example.fuzzed.NewPathService;
 import com.example.fuzzed.ProgramService;
-import com.example.miner.chain.Chain;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
 import com.example.net.base.PacketBody;
@@ -14,19 +13,16 @@ import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewBlockEvent;
 import com.example.net.events.NewPeerEvent;
 import com.example.web.service.ChainService;
-import com.example.web.service.MiningService;
 import com.example.web.service.PeerService;
 import com.example.web.service.ValidationService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.tio.client.ClientChannelContext;
 import org.tio.core.Node;
 
-import java.io.File;
 import java.util.*;
 
 // 处理其他node发送的message request
@@ -39,9 +35,10 @@ public class MessageServerHandler {
     private final ValidationService validationService;
     private final ChainService chainService;
     private final P2pClient p2pClient;
-    private final ProgramService programService;
     private final NewPathService newPathService;
     private final Payloads payloads;
+    private final NewPathManager newPathManager;
+    private final ProgramQueue programQueue;
 
 
     public synchronized MessagePacket helloMessage(byte[] msgBody) {
@@ -107,8 +104,8 @@ public class MessageServerHandler {
         return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, true), "成功");
     }
 
-    // supplier或者observer处理接收到的新节点，不需要提交payloads
-    public synchronized MessagePacket receiveNewBlock_supplierOrobserver(byte[] msgBody){
+    // observer处理接收到的新节点，不需要提交payloads
+    public synchronized MessagePacket receiveNewBlock_observer(byte[] msgBody){
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
         // 先检查该区块是否本地已存在
         if (chainService.getBlockByHash(newBlock.getHash()) != null) {
@@ -121,6 +118,26 @@ public class MessageServerHandler {
         logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
         // 广播给其他peer
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
+        return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, true), "成功");
+    }
+
+    // supplier处理接收到的新节点, 如果成功添加新区块，则发布新路径贡献排名
+    public synchronized MessagePacket receiveNewBlock_supplier(byte[] msgBody) {
+        Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
+        // 先检查该区块是否本地已存在
+        if (chainService.getBlockByHash(newBlock.getHash()) != null) {
+            return null;
+        }
+        if (!validationService.processNewMinedBlock(newBlock)) {
+            logger.info("校验新区块失败, hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
+            return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, false), "校验新区块失败");
+        }
+        logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
+        // 广播给其他peer
+        ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
+        // 发布新路径贡献度排名
+        HashMap<String, List<NewPath>> pathMap = newPathManager.getPaths();
+        newPathService.NewPathContributionRank(pathMap);
         return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, true), "成功");
     }
 
@@ -162,12 +179,13 @@ public class MessageServerHandler {
             logger.info("supplier信息存入数据库");
         }
         // 收到program后，放入队列
-        if(programService.addProgramQueue(nodePair)){
-            ArrayDeque<MutablePair<byte[], Peer>> queue = programService.getProgramQueue();
+        if(programQueue.addProgramQueue(nodePair)){
+            ArrayDeque<MutablePair<byte[], Peer>> queue = programQueue.getProgramQueue();
             for (MutablePair<byte[], Peer> peerMutablePair : queue) {
                 logger.info("队列中内容：文件长度为{},node为{}",peerMutablePair.getLeft().length,peerMutablePair.getRight());
             }
         }
+        logger.info("再获取一次ProgramQueue: {}", programQueue.getProgramQueue());
 //        programService.byteToFile(fileByte, path, name);
     }
 
@@ -183,15 +201,19 @@ public class MessageServerHandler {
     public synchronized boolean processPayloads(byte[] msgBody, long timestamp) {
         Payloads payloads = (Payloads) SerializeUtils.unSerialize(msgBody);
         List<Payload> pathList = payloads.getPayloads();
+        logger.info("收到的payloads的大小:{}", pathList.size());
         String address = payloads.getAddress();
         Block newBlock = payloads.getNewBlock();
         // 先校验newBlock
         if(validationService.supplierCheckNewBlock(newBlock)) {
             logger.info("通过supplier校验，开始筛选NewPath");
             List<NewPath> newPaths = newPathService.ProcessPayloads(pathList, timestamp, address);
+            if (newPaths.isEmpty()) {
+                logger.info("No new path found");
+            }
             // 添加到NewPathMap中，等待排名
-            newPathService.addNewPathMap(address, timestamp, newPaths);
-            HashMap<String, List<NewPath>> newPathMap = newPathService.getNewPathMap();
+            newPathManager.addPathHashMap(address, newPaths);
+            HashMap<String, List<NewPath>> newPathMap = newPathManager.getPaths();
             logger.info("NewPathMap: size={}", newPathMap.size());
             for (Map.Entry<String, List<NewPath>> entry : newPathMap.entrySet()) {
                 System.out.println(entry.getKey() + ":" + entry.getValue());
@@ -203,9 +225,9 @@ public class MessageServerHandler {
 
     // 处理其他节点的ProgramQueue请求
     public synchronized MessagePacket responseProgramQueue() {
-        ArrayDeque<MutablePair<byte[], Peer>> programQueue = programService.getProgramQueue();
+        ArrayDeque<MutablePair<byte[], Peer>> queue = programQueue.getProgramQueue();
         PacketBody packetBody = new PacketBody();
-        packetBody.setItem(programQueue);
+        packetBody.setItem(queue);
         packetBody.setSuccess(true);
         MessagePacket messagePacket = buildPacket(MessagePacketType.PROGRAM_QUEUQ_RESP, packetBody, "成功");
         return messagePacket;

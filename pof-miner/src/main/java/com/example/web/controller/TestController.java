@@ -1,27 +1,23 @@
 package com.example.web.controller;
 
-import com.example.base.entities.Message;
-import com.example.base.entities.Node;
-import com.example.base.entities.NodeType;
-import com.example.base.entities.Peer;
+import com.example.base.entities.*;
+import com.example.base.utils.CryptoUtils;
 import com.example.base.utils.SerializeUtils;
 import com.example.fuzzed.ProgramService;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
 import com.example.net.client.P2pClient;
-import com.example.net.server.P2pServer;
 import com.example.web.service.testservice1;
 import com.example.web.service.testservice2;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.tio.client.ClientChannelContext;
 import org.tio.core.Tio;
 
-import java.math.BigDecimal;
-import java.util.ArrayDeque;
-import java.util.List;
+import java.util.*;
 
 @RestController
 @RequestMapping("/test")
@@ -33,6 +29,8 @@ public class TestController {
     private final ProgramService programService;
     private List<ClientChannelContext> channelContextList;
     private final Node node;
+    private final NewPathManager newPathManager;
+    private final ProgramQueue programQueue;
 
     @RequestMapping("/setPayloads")
     public void getPayloads() {
@@ -46,11 +44,10 @@ public class TestController {
 
     @RequestMapping("/getProgramQueue")
     public void getProgramQueue() {
-        ArrayDeque<MutablePair<byte[], Peer>> programQueue =
-                programService.getProgramQueue();
-        if (programQueue.isEmpty())
+        ArrayDeque<MutablePair<byte[], Peer>> queue = programQueue.getProgramQueue();
+        if (queue.isEmpty())
             System.out.println("[]");
-        for (MutablePair<byte[], Peer> pair : programQueue) {
+        for (MutablePair<byte[], Peer> pair : queue) {
             System.out.println(pair.getLeft().length + ";" + pair.getRight());
         }
     }
@@ -81,10 +78,51 @@ public class TestController {
         }
     }
 
+    @RequestMapping("setNewPathMap")
+    public void addNewPathMap() {
+        List<NewPath> newPaths1 = new ArrayList<>();
+        List<NewPath> newPaths2 = new ArrayList<>();
+        List<NewPath> newPaths3 = new ArrayList<>();
+        Integer[] arr = {1,2,4,2};
+        newPaths1.add(new NewPath(Arrays.asList(arr), "12312", 123214));
+        newPaths2.add(new NewPath(Arrays.asList(arr), "54674", 345354));
+        newPaths3.add(new NewPath(Arrays.asList(arr), "1354", 3525425));
+        newPathManager.addPathHashMap("1233", newPaths1);
+        newPathManager.addPathHashMap("1233", newPaths2);
+        newPathManager.addPathHashMap("1233", newPaths3);
+    }
+
     @RequestMapping("/getNodeType")
     public void getNodeType() {
         System.out.println(node);
     }
+
+    @RequestMapping("getNewPathMap")
+    public HashMap<String, List<NewPath>> getNewPathMap() {
+        return newPathManager.getPaths();
+    }
+
+    public static void main(String[] args) {
+        List<Integer> list1 = new ArrayList<>();
+        list1.add(1);
+        list1.add(2);
+        list1.add(3);
+
+        List<Integer> list2 = new ArrayList<>();
+        list2.add(1);
+        list2.add(2);
+        list2.add(3);
+
+        String str1 = StringUtils.join(list1, ",");
+        String str2 = StringUtils.join(list2, ",");
+
+        // 计算 hash 值
+        System.out.println(CryptoUtils.SHA256(str1));
+        System.out.println(CryptoUtils.SHA256(str2));
+
+        System.out.println("Hashes are equal: " + (CryptoUtils.SHA256(str1).equals(CryptoUtils.SHA256(str2))));
+    }
+
 
 
 }

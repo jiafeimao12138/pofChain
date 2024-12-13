@@ -309,6 +309,7 @@ static s32 interesting_32[] = { INTERESTING_8, INTERESTING_16, INTERESTING_32 };
 // openssl hash
 static windowHashOutput[65];
 
+
 /* Fuzzing stages */
 
 enum {
@@ -7134,7 +7135,7 @@ int verify(){
 /* Handle timeout (SIGALRM). */
 
 static void handle_timeout(int sig) {
-
+// TODO：setitimer目前是1s，那就以1s为单位计数，比如超时算5s的话，那当计数器达到5，就触发
 //  printf("start to verify\n");
 //  printf("==========================================");
   
@@ -7162,8 +7163,9 @@ static void handle_timeout(int sig) {
         testfile_id += 1;
         char case_dest[50];
         char path_dest[50];
-        sprintf(case_dest, "./afl_testfiles/window_testcases/testcase_%d", testfile_id);
-        sprintf(path_dest, "./afl_testfiles/window_paths/testfile_%d", testfile_id);
+      
+        sprintf(case_dest, "./afl_testfiles/windows/window_testcases/testcase_%d", testfile_id);
+        sprintf(path_dest, "./afl_testfiles/windows/window_paths/testfile_%d", testfile_id);
         if(child_pid > 0){
           kill(child_pid, SIGSTOP);
 //          printf("==========================================");

@@ -14,13 +14,13 @@ public class NodeConfig {
     public Node node() {
         return new Node();
     }
-    @Bean(value = "newPath")
-    public NewPath newPath() {
-        return new NewPath();
-    }
-    @Bean(value = "newPathMap")
-    public HashMap<String, List<NewPath>> NewPathMap() {
-        HashMap<String, List<NewPath>> map = new HashMap<>();
-        return map;
-    }
+//    @Bean(value = "newPath")
+//    public NewPath newPath() {
+//        return new NewPath();
+//    }
+//    @Bean(value = "newPathMap")
+//    public HashMap<String, List<NewPath>> NewPathMap() {
+//        HashMap<String, List<NewPath>> map = new HashMap<>();
+//        return map;
+//    }
 }

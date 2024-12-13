@@ -2,6 +2,7 @@ package com.example.net.client;
 
 import com.example.base.entities.Block;
 import com.example.base.entities.Peer;
+import com.example.base.entities.ProgramQueue;
 import com.example.base.utils.SerializeUtils;
 import com.example.fuzzed.ProgramService;
 import com.example.net.base.PacketBody;
@@ -26,6 +27,7 @@ public class MessageClientHandler {
     private final ChainService chainService;
     private final ValidationService validationService;
     private final ProgramService programService;
+    private final ProgramQueue programQueue;
 
     // 处理请求某高度区块时接收到的res
     public void receiveGetBlockByHeightRes(byte[] body) {
@@ -70,9 +72,9 @@ public class MessageClientHandler {
 
     public void receiveProgramQueue(byte[] body) {
         PacketBody packetBody = (PacketBody) SerializeUtils.unSerialize(body);
-        ArrayDeque<MutablePair<byte[], Peer>> programQueue =
+        ArrayDeque<MutablePair<byte[], Peer>> queue =
                 (ArrayDeque<MutablePair<byte[], Peer>>) packetBody.getItem();
-        programService.setProgramQueue(programQueue);
+        programQueue.setProgramQueue(queue);
     }
 
 }

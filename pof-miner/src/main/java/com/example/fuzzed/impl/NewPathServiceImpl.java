@@ -9,12 +9,14 @@ import com.example.fuzzed.NewPathService;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewPathRank;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,7 +25,9 @@ public class NewPathServiceImpl implements NewPathService {
     private static final Logger logger = LoggerFactory.getLogger(NewPathServiceImpl.class);
 
     private final DBStore dbStore;
-    private final HashMap<String, List<NewPath>> NewPathMap;
+    private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+    private final Lock readLock = rwl.readLock();
+    private final Lock writeLock = rwl.writeLock();
 
     @Override
     public List<NewPath> ProcessPayloads(List<Payload> payloads, long timestamp, String fuzzerAddress) {
@@ -38,18 +42,24 @@ public class NewPathServiceImpl implements NewPathService {
                 paths.add(path);
             }
         }
+        logger.info("去重后的pathList: {}", paths);
         //获得去重后的path，对它们进行处理
         for (List<Integer> path : paths) {
-            String pathHash = CryptoUtils.SHA256(path.toString());
-            Optional<Object> o = dbStore.get(pathHash);
+            String pathStr = StringUtils.join(path, ",");
+            String pathHash = CryptoUtils.SHA256(pathStr);
+            readLock.lock();
+            Optional<Object> o = dbStore.get(PathPrefix.PATH_PREFIX.getPrefix() + pathHash);
+            readLock.unlock();
             // 如果hash值存在，则先判断是否hash碰撞，没有碰撞的话表示这个path已经存在，不是新路径，舍弃即可
             if (o.isPresent()) {
                 List<Integer> rockspath = (List<Integer>) o.get();
+                logger.info("路径已存在，{}", rockspath);
                 if (!rockspath.equals(path)) {
                     // @TODO 说明碰撞了
 
                 }
             }else {
+                writeLock.lock();
                 // 数据库中没有该路径，表明这是一个新路径，那么存入数据库中
                 dbStore.put(PathPrefix.PATH_PREFIX.getPrefix() + pathHash, path);
                 dbStore.put(PathPrefix.PATH_FUZZER_PREFIX.getPrefix() + pathHash, fuzzerAddress );
@@ -59,18 +69,16 @@ public class NewPathServiceImpl implements NewPathService {
                 newPath.setFuzzerAddress(fuzzerAddress);
                 newPath.setTimestamp(timestamp);
                 newPahtList.add(newPath);
+                logger.info("newPath存入数据库：{}", newPath);
+                writeLock.unlock();
             }
         }
-        NewPathMap.put(fuzzerAddress, newPahtList);
         return newPahtList;
     }
 
 
     @Override
-    public void NewPathContributionRank(List<NewPath> markedNewPaths) {
-        // 将新路径列表按照Fuzzer分组
-        Map<String, List<NewPath>> groupNewPath =
-                markedNewPaths.stream().collect(Collectors.groupingBy(NewPath::getFuzzerAddress));
+    public void NewPathContributionRank(HashMap<String, List<NewPath>> groupNewPath) {
         // 根据Fuzzer挖出的新路径数量倒序排序
         Comparator<List<NewPath>> comparator = new Comparator<List<NewPath>>() {
             @Override
@@ -92,11 +100,4 @@ public class NewPathServiceImpl implements NewPathService {
         logger.info("已广播本轮Fuzzing的新路径排名");
     }
 
-    public HashMap<String, List<NewPath>> getNewPathMap() {
-        return NewPathMap;
-    }
-
-    public void addNewPathMap(String address, long timestamp, List<NewPath> newPaths) {
-        NewPathMap.put(address, newPaths);
-    }
 }

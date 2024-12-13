@@ -7,6 +7,7 @@ import java.util.List;
 
 // 新路径类
 @Data
+@Component
 public class NewPath {
     // 被标记的新路径
     private List<Integer> path;
