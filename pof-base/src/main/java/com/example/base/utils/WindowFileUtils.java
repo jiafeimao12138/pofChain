@@ -58,17 +58,14 @@ public class WindowFileUtils {
 
             byte[] pathsBuffer = new byte[1024]; // 定义缓冲区
             int bytesRead;
-
-
             while ((bytesRead = pathFile.read(pathsBuffer)) != -1) {
                 // 将读取的字节转换为字符串
                 for (int i = 0; i < bytesRead; i++) {
                     stringBuilder.append(String.format("%02X", pathsBuffer[i])); // 转换为十六进制表示
                 }
-//                System.out.println(stringBuilder.toString());
             }
             String pathstr = stringBuilder.toString();
-//            System.out.println(pathstr);
+            System.out.println("path length: " + pathstr.length());
             String[] pathsplits = pathstr.split("0000");
 //            for (int i = 1; i < pathsplits.length; i++) {
 //                System.out.println(i + ":" + pathsplits[i]);
@@ -114,7 +111,6 @@ public class WindowFileUtils {
 //                }
 //                System.out.println();
             }
-
 
         } catch (IOException e) {
             e.printStackTrace();

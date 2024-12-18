@@ -10,7 +10,6 @@ import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
 import com.example.net.client.P2pClient;
 import com.example.net.conf.ApplicationContextProvider;
-import com.example.net.events.GetProgramQueue;
 import com.example.net.events.NewBlockEvent;
 import com.example.web.service.ChainService;
 import com.example.web.service.MiningService;
@@ -32,10 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.security.SecureRandom;
 import java.util.*;
 
@@ -62,8 +58,10 @@ public class MiningServiceImpl implements MiningService {
     private final com.example.base.entities.Node node1;
 
     private int hitCount = 0;
-    long endWindow = 0;
-    long lastWindowEnd = System.currentTimeMillis();
+    private long endWindow = 0;
+    private long lastWindowEnd = System.currentTimeMillis();
+    private long fileNum = 0;
+    private Peer supplier;
 
     @Value("${targetProgramQueueDir}")
     private String targetProgramQueueDir;
@@ -98,7 +96,21 @@ public class MiningServiceImpl implements MiningService {
             return;
         }
         new Thread(() -> {
-            logger.info("开始进行Fuzzing挖矿");
+            logger.info("开始监控窗口文件");
+            //@TODO: 动态调整难度
+            List<BigInteger> interval = generateRandomHashHead(5);
+            BigInteger head = interval.get(0);
+            BigInteger end = interval.get(1);
+            try {
+                String content = "动态区间：[" + head.toString() + "," + end.toString() + "]\n";
+                Files.write(path, content.getBytes());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            windowFilesWatcher(head, end);
+        }).start();
+        new Thread(() -> {
+            logger.info("开始进行Fuzzing");
             try {
                 Pair<String, Peer> targetProgram;
                 ArrayDeque<MutablePair<byte[], Peer>> queue = programQueue.getProgramQueue();
@@ -107,8 +119,8 @@ public class MiningServiceImpl implements MiningService {
                     logger.info("待测程序队列为空，当前无待测程序");
                 } else {
                     String tobeFuzzedPath = targetProgram.getLeft();
-                    Peer supplier = targetProgram.getRight();
-                    executeCommand(tobeFuzzedPath, supplier);
+                    supplier = targetProgram.getRight();
+                    executeCommand(tobeFuzzedPath);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -116,86 +128,132 @@ public class MiningServiceImpl implements MiningService {
         }).start();
     }
 
-    public void executeCommand(String targetProgram, Peer supplier) {
-        //区间
-        List<BigInteger> interval = generateRandomHashHead(5);
-        BigInteger head = interval.get(0);
-        BigInteger end = interval.get(1);
-        try {
-            String content = "动态区间：[" + head.toString() + "," + end.toString() + "]\n";
-            Files.write(path, content.getBytes());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
+    public void executeCommand(String targetProgram) {
         ProcessBuilder processBuilder = new ProcessBuilder();
 //        指定工作目录
         processBuilder.directory(new java.io.File(aflDirectory));
         String fuzzOutDir = fuzzOut + node1.getAddress().substring(0,6);
         processBuilder.command("afl-fuzz", "-i", fuzzIn , "-o", fuzzOutDir , targetProgram);
-
         try {
             Process process = processBuilder.start();
-            // 获取输出
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            int num;
-            while ((line = reader.readLine()) != null) {
-                System.out.println(line);
-                if (line.contains("this window end")){
-                    String[] nums = line.split("num=");
-                    num = Integer.parseInt(nums[1]);
-                    List<Transaction> transactions = new ArrayList<>();
-                    try {
-                        triples = WindowFileUtils.windowFilesToTriple(
-                                windowFiles + "/window_testcases/testcase_" + num,
-                                windowFiles + "/window_paths/testfile_" + num);
-                        // 向中间值添加本轮挖矿的path信息，等到新区块成功挖出后再置空
-                        payloads.addPayloads(triples);
-                        logger.info("本次处理文件num={}", num);
-                        // 每20个文件清理一次
-                        if(num % 20 == 1) {
-                            for (int i = 1; i <= 20; i++) {
-                                deleteFile(windowFiles + "/window_testcases/testcase_" + (num- 21 + i));
-                                deleteFile(windowFiles + "/window_paths/testfile_" + (num- 21 + i));
-                            }
-//                            logger.info("本次清理完毕, num={}", num);
-                        }
-                        Block preBlock = chainService.getLocalLatestBlock();
-                        logger.info("本次计算区块hash的preBlock：高度为{}, Hash为{}", preBlock.getBlockHeader().getHeight(), preBlock.getHash());
-                        Block newBlock = computeWindowHash(preBlock, transactions, triples);
-                        String newHash = newBlock.getHash();
-
-                        logger.info("新区块中的payload长度为：{}", newBlock.getBlockHeader().getTriples().size());
-                        // 当命中区间
-                        if(isInInterval(newHash, head, end)) {
-                            // 挖矿成功，并且提交payloads
-                            if (whenmined(newBlock, newHash, supplier)) {
-                                logger.info("挖矿成功，并且提交payloads");
-
-                            } else {
-                                logger.info("失败");
-                            }
-                        } else {
-                            Files.write(path, "not hit".getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-                        }
-                        BigInteger newHashInteger = new BigInteger(newHash, 16);
-                        String content = "," + hitCount + "," + (num-1) + "," + newHashInteger + "\n";
-                        Files.write(path, content.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-                        triples.clear();
-                    } catch (WindowFileException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-
-            }
-
             // 等待命令执行完毕
             int exitCode = process.waitFor();
-            System.out.println("\nExited with code: " + exitCode);
+            System.out.println("AFL结束运行，退出代码: " + exitCode);
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
-        } 
+        }
+    }
+
+    public void windowFilesWatcher(BigInteger head, BigInteger end) {
+        // 设置需要监控的目录路径
+        Path testcases_dir = Paths.get(windowFiles + "/window_testcases");
+        Path path_dir = Paths.get(windowFiles + "/window_paths");
+        try {
+            // 创建 WatchService
+            WatchService watchService = FileSystems.getDefault().newWatchService();
+            // 注册目录以监控创建事件
+            testcases_dir.register(watchService, StandardWatchEventKinds.ENTRY_CREATE);
+            path_dir.register(watchService, StandardWatchEventKinds.ENTRY_CREATE);
+            // 存储新生成的文件
+            Deque<Path> testcasefilesList =  new LinkedList<>();
+            Deque<Path> pathfilesList = new LinkedList<>();
+
+            logger.info("开始监控目录: {},{}", testcases_dir, path_dir);
+            while (true) {
+                // 等待下一个事件
+                WatchKey key;
+                try {
+                    key = watchService.take();
+                } catch (InterruptedException e) {
+                    System.err.println("监控被中断: " + e.getMessage());
+                    return;
+                }
+                // 处理事件
+                for (WatchEvent<?> event : key.pollEvents()) {
+                    WatchEvent.Kind<?> kind = event.kind();
+                    // 确保事件是创建事件
+                    if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
+                        // 获取新创建的文件名
+                        WatchEvent<Path> ev = (WatchEvent<Path>) event;
+                        Path newFilePath = ((Path) key.watchable()).resolve(ev.context());
+                        System.out.println("检测到新文件: " + newFilePath);
+                        // 存储
+                        if (key.watchable().equals(testcases_dir)){
+                            testcasefilesList.offer(newFilePath);
+                        } else if (key.watchable().equals(path_dir)) {
+                            pathfilesList.offer(newFilePath);
+                        }
+                        System.out.println("=============");
+                        for (Path path1 : testcasefilesList) {
+                            System.out.print("|" + path1.getFileName().toString() + ",");
+                        }
+                        System.out.println();
+                        for (Path path1 : pathfilesList) {
+                            System.out.print("|" + path1.getFileName().toString() + ",");
+                        }
+                        System.out.println();
+                        if (testcasefilesList.size() > 1 && pathfilesList.size() > 1) {
+                            doMiningthing(testcasefilesList.pop(), pathfilesList.pop(), head, end);
+                        }
+                    }
+                }
+                // 重置 WatchKey
+                boolean valid = key.reset();
+                if (!valid) {
+                    System.err.println("监控键无效，退出监控...");
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("无法监控目录: " + e.getMessage());
+        } catch (WindowFileException e) {
+            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void doMiningthing(Path testcaseFile,
+                              Path pathFile,
+                              BigInteger head,
+                              BigInteger end) throws WindowFileException, IOException, InterruptedException {
+        // @TODO 选择transactions
+        List<Transaction> transactions = new ArrayList<>();
+        triples = WindowFileUtils.windowFilesToTriple(
+                testcaseFile.toAbsolutePath().toString(),
+                pathFile.toAbsolutePath().toString());
+        // 向中间值添加本轮挖矿的path信息，等到新区块成功挖出后再置空
+        payloads.addPayloads(triples);
+        logger.info("本次处理文件num={}", ++fileNum);
+        // 每20个文件清理一次
+        if(fileNum % 20 == 1) {
+            for (int i = 1; i <= 20; i++) {
+                deleteFile(windowFiles + "/window_testcases/testcase_" + (fileNum- 21 + i));
+                deleteFile(windowFiles + "/window_paths/testfile_" + (fileNum- 21 + i));
+            }
+//            logger.info("本次清理完毕, num={}", num);
+        }
+        Block preBlock = chainService.getLocalLatestBlock();
+        logger.info("本次计算区块hash的preBlock：高度为{}, Hash为{}", preBlock.getBlockHeader().getHeight(), preBlock.getHash());
+        Block newBlock = computeWindowHash(preBlock, transactions, triples);
+        String newHash = newBlock.getHash();
+
+        logger.info("新区块中的payload长度为：{}", newBlock.getBlockHeader().getTriples().size());
+        // 当命中区间
+        if(isInInterval(newHash, head, end)) {
+            // 挖矿成功，并且提交payloads
+            if (whenmined(newBlock, newHash, supplier)) {
+                logger.info("挖矿成功，并且提交payloads");
+            } else {
+                logger.info("失败");
+            }
+        } else {
+            Files.write(this.path, "not hit".getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        }
+        BigInteger newHashInteger = new BigInteger(newHash, 16);
+        String content = "," + hitCount + "," + fileNum + "," + newHashInteger + "\n";
+//        Files.write(this.path, content.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        triples.clear();
     }
 
     public Block computeWindowHash(Block preBlock, List<Transaction> transactionList, List<Payload> triples){
@@ -297,18 +355,12 @@ public class MiningServiceImpl implements MiningService {
             }
             // 等待脚本执行完成
             int exitCode = process.waitFor();
-            System.out.println("Exited with code: " + exitCode);
+            System.out.println("退出代码: " + exitCode);
         } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
         return true;
-    }
-
-    @Override
-    public List<Payload> getPayloads() {
-        List<Payload> payloads1 = payloads.getPayloads();
-        return payloads1;
     }
 
     public static boolean deleteFile(String fileName) {
@@ -331,7 +383,7 @@ public class MiningServiceImpl implements MiningService {
             processBuilder.command("./deleteAFLfiles.sh");
             Process process = processBuilder.start();
             int exitCode = process.waitFor();
-            System.out.println("Exited with code: " + exitCode);
+            System.out.println("退出代码: " + exitCode);
             return true;
         } catch (Exception e) {
             e.printStackTrace();

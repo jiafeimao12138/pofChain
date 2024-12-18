@@ -8,5 +8,4 @@ import java.util.List;
 public interface MiningService {
     void startMining();
     boolean AFLswitchRoot();
-    List<Payload> getPayloads();
 }

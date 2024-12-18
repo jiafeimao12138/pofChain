@@ -181,7 +181,7 @@ EXP_ST u32 queued_paths,              /* Total number of queued testcases */
            var_byte_count,            /* Bitmap bytes with var behavior   */
            current_entry,             /* Current queue entry ID           */
            havoc_div = 1;             /* Cycle count divisor for havoc    */
-int testfile_id = 0;
+int testfile_id = 1;
 int childpidzerocnt = 0;
 int timeout_handle_cnt = 0;
 int iscrash = 0;
@@ -4099,7 +4099,7 @@ static void check_term_size(void);
    execve() calls, plus in several other circumstances. */
 
 static void show_stats(void) {
-
+  
   static u64 last_stats_ms, last_plot_ms, last_ms, last_execs;
   static double avg_exec;
   double t_byte_ratio, stab_ratio;
@@ -4187,6 +4187,27 @@ static void show_stats(void) {
 
   if (total_crashes && getenv("AFL_BENCH_UNTIL_CRASH")) stop_soon = 2;
 
+  // AFL是否终止
+  u64 min_wo_finds = (cur_ms - last_path_time) / 1000 / 60;
+
+    /* First queue cycle: don't stop now! */
+    // if (queue_cycle == 1 || min_wo_finds < 15) strcpy(tmp, cMGN); else
+    // if (queue_cycle == 1) strcpy(tmp, cMGN); else
+    // /* Subsequent cycles, but we're still making finds. */
+    // if (cycles_wo_finds < 25 || min_wo_finds < 30) strcpy(tmp, cYEL); else
+
+    /* No finds for a long time and no test cases to try. */
+    if (queue_cycle > 2){
+      //  strcpy(tmp, cLGN);
+       // 达到条件，自动停止AFL
+       int pid = getpid();
+       kill(pid, SIGKILL);
+    }
+    /* Default: cautiously OK to stop? */
+    // else strcpy(tmp, cLBL);
+
+  // AFL是否终止
+
   /* If we're not on TTY, bail out. */
 
   if (not_on_tty) return;
@@ -4255,21 +4276,24 @@ static void show_stats(void) {
     u64 min_wo_finds = (cur_ms - last_path_time) / 1000 / 60;
 
     /* First queue cycle: don't stop now! */
-    if (queue_cycle == 1 || min_wo_finds < 15) strcpy(tmp, cMGN); else
-
-    /* Subsequent cycles, but we're still making finds. */
-    if (cycles_wo_finds < 25 || min_wo_finds < 30) strcpy(tmp, cYEL); else
+    // if (queue_cycle == 1 || min_wo_finds < 15) strcpy(tmp, cMGN); else
+    if (queue_cycle == 1) strcpy(tmp, cMGN); else
+    // /* Subsequent cycles, but we're still making finds. */
+    // if (cycles_wo_finds < 25 || min_wo_finds < 30) strcpy(tmp, cYEL); else
 
     /* No finds for a long time and no test cases to try. */
-    if (cycles_wo_finds > 100 && !pending_not_fuzzed && min_wo_finds > 120)
-      strcpy(tmp, cLGN);
-
+    if (queue_cycle > 2){
+      //  strcpy(tmp, cLGN);
+       // 达到条件，自动停止AFL
+       int pid = getpid();
+       kill(pid, SIGKILL);
+    }
     /* Default: cautiously OK to stop? */
     else strcpy(tmp, cLBL);
 
   }
 
-  SAYF(bV bSTOP "        run time : " cRST "%-34s " bSTG bV bSTOP
+  SAYF(bV bSTOP "        run time11: " cRST "%-34s " bSTG bV bSTOP
        "  cycles done : %s%-5s  " bSTG bV "\n",
        DTD(cur_ms, start_time), tmp, DI(queue_cycle - 1));
 
@@ -7160,31 +7184,44 @@ static void handle_timeout(int sig) {
 //        printf("child_pid=%d\n", child_pid);
         char *path_source = "testfile1";
         char *case_source = "testcase_file";
-        testfile_id += 1;
+
         char case_dest[50];
         char path_dest[50];
-      
-        sprintf(case_dest, "./afl_testfiles/windows/window_testcases/testcase_%d", testfile_id);
-        sprintf(path_dest, "./afl_testfiles/windows/window_paths/testfile_%d", testfile_id);
+
         if(child_pid > 0){
           kill(child_pid, SIGSTOP);
+          sprintf(case_dest, "./afl_testfiles/windows/window_testcases/testcase_%d", testfile_id);
+          sprintf(path_dest, "./afl_testfiles/windows/window_paths/testfile_%d", testfile_id);
 //          printf("==========================================");
-          // 处理上个窗口的path和case
+          // 处理这个窗口的path和case
           printf("testfile_id=%d\n", testfile_id);
 
           // 把上个窗口的path和case复制一下，也就是说把此时的testfile1复制testfile_xxx中)，用来给区块链使用
-          //  TODO：文件名以时间戳命名
+
           copy_by_char(case_dest, case_source);
           copy_by_char(path_dest, path_source);
 //          int result = verify();
 //          if(result != 0){
 //             FATAL("verify error");
 //          }
+           // 新文件生成
+          testfile_id += 1;
+          char next_case_dest[50];
+          char next_path_dest[50];
+
+          sprintf(next_case_dest, "./afl_testfiles/windows/window_testcases/testcase_%d", testfile_id);
+          sprintf(next_path_dest, "./afl_testfiles/windows/window_paths/testfile_%d", testfile_id);
+          FILE *new_case_file = fopen(next_case_dest, "w");
+          FILE *new_path_file = fopen(next_path_dest, "w");
+          fclose(new_case_file);
+          fclose(new_path_file);
+
           kill(child_pid, SIGCONT);
         }
         else{
 //          printf("复制前child_pid=%d, cnt = %d\n", child_pid, ++childpidzerocnt);
-
+          sprintf(case_dest, "./afl_testfiles/windows/window_testcases/testcase_%d", testfile_id);
+          sprintf(path_dest, "./afl_testfiles/windows/window_paths/testfile_%d", testfile_id);
           copy_by_char(case_dest, case_source);
           copy_by_char(path_dest, path_source);
 //          printf("复制后child_pid=%d, cnt = %d\n",  child_pid, childpidzerocnt);
@@ -7193,16 +7230,26 @@ static void handle_timeout(int sig) {
 //             FATAL("verify error");
 //          }
           // kill(child_pid, SIGCONT);
+          // 新文件生成
+         testfile_id += 1;
+         char next_case_dest[50];
+         char next_path_dest[50];
+
+         sprintf(next_case_dest, "./afl_testfiles/windows/window_testcases/testcase_%d", testfile_id);
+         sprintf(next_path_dest, "./afl_testfiles/windows/window_paths/testfile_%d", testfile_id);
+         FILE *new_case_file = fopen(next_case_dest, "w");
+         FILE *new_path_file = fopen(next_path_dest, "w");
+         fclose(new_case_file);
+         fclose(new_path_file);
         }
         printf("this window end, num=%d\n", testfile_id);
 
 
 //     重新设置定时器
-       timer.it_value.tv_sec = 1;      
+       timer.it_value.tv_sec = 1;
        timer.it_value.tv_usec = 0;
        setitimer(ITIMER_REAL, &timer, NULL);
        printf("new window start\n");
-    
   }
   
 
@@ -8447,16 +8494,23 @@ int main(int argc, char** argv) {
   // rlim.rlim_cur = 1;
   // rlim.rlim_max = RLIM_INFINITY;
   // setrlimit(RLIMIT_CPU, &rlim);
+
+  // 创建初始窗口文件
+  FILE *testcase_file = fopen("./afl_testfiles/windows/window_testcases/testcase_1", "w");
+  FILE *paths_file = fopen("./afl_testfiles/windows/window_paths/testfile_1", "w");
+  fclose(testcase_file);
+  fclose(paths_file);
+
   timer.it_value.tv_sec = 1;      // 首次触发前的延迟时间（秒）
   timer.it_value.tv_usec = 0;     // 首次触发前的延迟时间（微秒）
   setitimer(ITIMER_REAL, &timer, NULL);
   printf("new window start");
 
-  
+
 
   while (1) {
 
-    
+
 
     sigalrm_id = 1;
     u8 skipped_fuzz;
