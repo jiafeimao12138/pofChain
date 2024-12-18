@@ -9,6 +9,7 @@ import com.example.net.client.P2pClient;
 import com.example.net.events.NewMsgEvent;
 import com.example.net.events.NewPathRank;
 import com.example.net.events.NewTargetProgramEvent;
+import com.example.net.events.TerminateAFLEvent;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -56,6 +57,15 @@ public class NewMessageListener {
         MessagePacket messagePacket = new MessagePacket();
         messagePacket.setType(MessagePacketType.NEW_PATH_RANK);
         messagePacket.setBody(SerializeUtils.serialize(pathRankMap));
+        p2pClient.sendToGroup(messagePacket);
+    }
+
+    // 广播终止AFL
+    @EventListener(TerminateAFLEvent.class)
+    public void onTerminateAFLEvent(TerminateAFLEvent event) {
+        MessagePacket messagePacket = new MessagePacket();
+        messagePacket.setType(MessagePacketType.TERMINATE_FUZZING);
+        messagePacket.setBody(SerializeUtils.serialize(1));
         p2pClient.sendToGroup(messagePacket);
     }
 }

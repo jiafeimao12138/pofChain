@@ -28,14 +28,13 @@ public interface MessagePacketType
     // supplier发布待测程序
     byte PUBLISH_FILE = 7;
     byte RECV_FILE = -7;
-    // 请求待测程序队列
-    byte REQ_PROG_QUEUE = 8;
-    byte RES_PROG_QUEUE = -8;
     // supplier广播新路径排名
     byte NEW_PATH_RANK = 9;
     // fuzzer向supplier提交payloads
     byte PAYLOADS_SUBMIT = 10;
-    // 新节点连接后请求ProgramQueue
+    // 请求ProgramQueue
     byte PROGRAM_QUEUQ_REQ = 11;
     byte PROGRAM_QUEUQ_RESP = -11;
+    // 终止Fuzzing
+    byte TERMINATE_FUZZING = 12;
 }

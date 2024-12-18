@@ -4197,11 +4197,11 @@ static void show_stats(void) {
     // if (cycles_wo_finds < 25 || min_wo_finds < 30) strcpy(tmp, cYEL); else
 
     /* No finds for a long time and no test cases to try. */
-    if (queue_cycle > 2){
+    if (queue_cycle > 4){
       //  strcpy(tmp, cLGN);
        // 达到条件，自动停止AFL
        int pid = getpid();
-       kill(pid, SIGKILL);
+       kill(pid, SIGINT);
     }
     /* Default: cautiously OK to stop? */
     // else strcpy(tmp, cLBL);

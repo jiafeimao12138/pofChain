@@ -6,6 +6,7 @@ import com.example.base.entities.NodeType;
 import com.example.net.server.P2pServer;
 import com.example.web.service.ChainService;
 import com.example.web.service.MiningService;
+import com.example.web.service.ProcessService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.checkerframework.checker.units.qual.N;
@@ -33,6 +34,7 @@ public class FuzzerController {
     private final MiningService miningService;
     private final ChainService chainService;
     private final Node node;
+    private final ProcessService processService;
     private String fuzzingprocessId = "";
 
     @RequestMapping("startFuzzing")
@@ -51,13 +53,13 @@ public class FuzzerController {
     @RequestMapping("suspendFuzzing")
     public void suspendFuzzing() {
         try {
-            List<String> processIds = findProcessIds("afl-fuzz");
+            List<String> processIds = processService.findProcessIds("afl-fuzz");
             logger.info("suspendFuzzing processIds: {}", processIds);
             if (processIds.size() > 1) {
                 logger.error("fuzzing进程数大于1");
             }else {
                 fuzzingprocessId = processIds.get(0);
-                suspendProcess(fuzzingprocessId);
+                processService.suspendProcess(fuzzingprocessId);
                 logger.info("已挂起，进程号{}", fuzzingprocessId);
             }
         } catch (Exception e) {
@@ -70,13 +72,13 @@ public class FuzzerController {
     public void stopFuzzing() {
         node.setType(NodeType.OBSERVER);
         try {
-            List<String> processIds = findProcessIds("afl-fuzz");
+            List<String> processIds = processService.findProcessIds("afl-fuzz");
             logger.info("suspendFuzzing processIds: {}", processIds);
             if (processIds.size() > 1) {
                 logger.error("fuzzing进程数大于1");
             }else {
                 fuzzingprocessId = processIds.get(0);
-                stopProcess(fuzzingprocessId);
+                processService.killProcess(fuzzingprocessId);
                 logger.info("已杀死Fuzzing进程，进程号{}", fuzzingprocessId);
             }
         } catch (Exception e) {
@@ -88,7 +90,7 @@ public class FuzzerController {
     @RequestMapping("resumeFuzzing")
     public void resumeFuzzing() {
         try {
-            resumeProcess(fuzzingprocessId);
+            processService.resumeProcess(fuzzingprocessId);
             logger.info("已恢复Fuzzing，进程号{}",fuzzingprocessId);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -122,45 +124,4 @@ public class FuzzerController {
 
     }
 
-    private static List<String> findProcessIds(String partialName) throws Exception {
-        List<String> pids = new ArrayList<>();
-        String line;
-        ProcessBuilder builder = new ProcessBuilder("sh", "-c", "ps -aux | grep " + partialName + " | grep -v grep");
-        Process process = builder.start();
-
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            while ((line = reader.readLine()) != null) {
-                // 解析输出，获取PID
-                String[] parts = line.trim().split("\\s+");
-                if (parts.length > 1) {
-                    pids.add(parts[1]); // PID是第二列
-                }
-            }
-        }
-        return pids;
-    }
-
-    private static void suspendProcess(String pid) throws Exception {
-        ProcessBuilder builder = new ProcessBuilder("kill", "-STOP", pid);
-        builder.start().waitFor();
-    }
-
-    private static void resumeProcess(String pid) throws Exception {
-        ProcessBuilder builder = new ProcessBuilder("kill", "-CONT", pid);
-        builder.start().waitFor();
-    }
-
-    private static void stopProcess(String pid) throws Exception {
-        ProcessBuilder builder = new ProcessBuilder("kill", "-9", pid);
-        builder.start().waitFor();
-    }
-
-    public static void main(String[] args) {
-        try {
-            List<String> processIds = findProcessIds("afl-fuzz");
-            System.out.println(processIds);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
 }

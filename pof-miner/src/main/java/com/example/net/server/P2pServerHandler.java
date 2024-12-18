@@ -105,6 +105,10 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 responsePacket = serverHandler.responseProgramQueue();
                 logger.info("ProgramQueue请求已处理");
                 break;
+            case MessagePacketType.TERMINATE_FUZZING:
+                logger.info("收到终止AFL消息");
+                serverHandler.terminatingAFL();
+                break;
         }
         logger.info("server回复client: channelContext:{}", channelContext);
         if (responsePacket != null){

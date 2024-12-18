@@ -12,8 +12,10 @@ import com.example.net.client.P2pClient;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewBlockEvent;
 import com.example.net.events.NewPeerEvent;
+import com.example.net.events.TerminateAFLEvent;
 import com.example.web.service.ChainService;
 import com.example.web.service.PeerService;
+import com.example.web.service.ProcessService;
 import com.example.web.service.ValidationService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -39,6 +41,8 @@ public class MessageServerHandler {
     private final Payloads payloads;
     private final NewPathManager newPathManager;
     private final ProgramQueue programQueue;
+    private final ProcessService processService;
+    private final com.example.base.entities.Node node;
 
 
     public synchronized MessagePacket helloMessage(byte[] msgBody) {
@@ -231,6 +235,28 @@ public class MessageServerHandler {
         packetBody.setSuccess(true);
         MessagePacket messagePacket = buildPacket(MessagePacketType.PROGRAM_QUEUQ_RESP, packetBody, "成功");
         return messagePacket;
+    }
+
+    // 处理终止AFL
+    public synchronized void terminatingAFL() {
+        node.setType(NodeType.OBSERVER);
+        try {
+            List<String> processIds = processService.findProcessIds("afl-fuzz");
+            logger.info("suspendFuzzing processIds: {}", processIds);
+            if (processIds.size() > 1) {
+                logger.error("fuzzing进程数大于1");
+            } else if (processIds.size() == 0) {
+                logger.info("无AFL进程");
+            }
+            else {
+                String processID = processIds.get(0);
+                processService.stopProcess(processID);
+                logger.info("已终止Fuzzing进程，进程号{}", processID);
+                ApplicationContextProvider.publishEvent(new TerminateAFLEvent(1));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private MessagePacket buildPacket(byte type, PacketBody packetBody, String message)

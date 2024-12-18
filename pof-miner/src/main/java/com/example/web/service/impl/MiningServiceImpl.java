@@ -11,6 +11,7 @@ import com.example.net.base.MessagePacketType;
 import com.example.net.client.P2pClient;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewBlockEvent;
+import com.example.net.events.TerminateAFLEvent;
 import com.example.web.service.ChainService;
 import com.example.web.service.MiningService;
 import com.example.web.service.ValidationService;
@@ -139,6 +140,10 @@ public class MiningServiceImpl implements MiningService {
             // 等待命令执行完毕
             int exitCode = process.waitFor();
             System.out.println("AFL结束运行，退出代码: " + exitCode);
+            if(exitCode == 0) {
+                ApplicationContextProvider.publishEvent(new TerminateAFLEvent(1));
+                logger.info("已终止AFL");
+            }
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
@@ -412,4 +417,7 @@ public class MiningServiceImpl implements MiningService {
         res.add(end);
         return res;
     }
+
+
+
 }
