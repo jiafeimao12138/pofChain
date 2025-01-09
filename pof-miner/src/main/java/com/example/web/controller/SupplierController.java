@@ -30,7 +30,8 @@ public class SupplierController {
     public void publishFile() {
         node.setType(NodeType.SUPPLIER);
         logger.info("node:{}", node);
-        programService.prepareTargetProgram("/home/wj/pofChain/AFL/afl_testfiles/test_afl_files/string_length.c",
-                "/home/wj/pofChain/AFL/afl_testfiles/objfiles/string_length_publish");
+        // @TODO：supplier上传源代码
+        programService.prepareTargetProgram("supplierfiles/string_length.c",
+                "supplierfiles/string_length_publish");
     }
 }

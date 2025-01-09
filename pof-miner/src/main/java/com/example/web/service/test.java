@@ -93,7 +93,7 @@ public class test {
     // 处理文件的逻辑
     private static void processFile(String testcase, String pathfile) {
         try {
-            List<Payload> payloadList = WindowFileUtils.windowFilesToTriple(testcase, pathfile);
+            List<Payload> payloadList = WindowFileUtils.windowFilesToTriple(testcase, pathfile, "");
             System.out.println("payload size:" + payloadList.size());
         } catch (WindowFileException e) {
             throw new RuntimeException(e);

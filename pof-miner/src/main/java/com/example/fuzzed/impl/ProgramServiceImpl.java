@@ -69,30 +69,24 @@ public class ProgramServiceImpl implements ProgramService {
     // fuzzer 将接收到的byte[]转换为file，准备fuzz
     @Override
     public String byteToFile(byte[] fileBytes, String path, String name) {
-        String absolutePath = path + name + System.currentTimeMillis();
+        String absolutePath = path + "/" + name + System.currentTimeMillis();
         File file = new File(absolutePath);
         try {
             file.createNewFile();
+            // 添加执行权限
+            file.setExecutable(true);
             try(FileOutputStream fos = new FileOutputStream(file)) {
                 fos.write(fileBytes);
-                // 添加执行权限
-                ProcessBuilder processBuilder = new ProcessBuilder("sudo", "chmod", "+x", absolutePath);
-                processBuilder.redirectErrorStream(true);
-                Process process = processBuilder.start();
-                process.waitFor();
                 logger.info("克隆待测程序成功：{}", file.getName());
-
             } catch (FileNotFoundException e) {
                 throw new RuntimeException(e);
             } catch (IOException e) {
-                throw new RuntimeException(e);
-            } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        return absolutePath;
+        return file.getAbsolutePath();
     }
 
     @Override

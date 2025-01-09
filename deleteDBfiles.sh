@@ -1,3 +1,3 @@
 #!/bin/bash
-sudo rm -rf /home/wj/pofChain/datastore
+sudo rm -rf /app/pofChain/datastore
 

@@ -31,7 +31,7 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
     private final MessageServerHandler serverHandler;
     private final Node node;
 
-    @Value("${targetProgramQueueDir}")
+    @Value("${fuzzer.targetProgramDir}")
     private String targetProgramQueueDir;
 
     public P2pServerHandler(MessageServerHandler serverHandler, Node node) {

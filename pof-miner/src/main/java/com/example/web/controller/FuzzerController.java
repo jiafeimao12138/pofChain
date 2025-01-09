@@ -43,9 +43,10 @@ public class FuzzerController {
             logger.info("supplier不允许fuzzing");
         } else {
             node.setType(NodeType.FUZZER);
-            if (miningService.AFLswitchRoot()){
-                miningService.startMining();
-            }
+//            if (miningService.AFLswitchRoot()){
+//                miningService.startMining();
+//            }
+            miningService.startMining();
         }
     }
 

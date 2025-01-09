@@ -3,6 +3,7 @@ package com.example.base.utils;
 import com.example.base.Exception.WindowFileException;
 import com.example.base.entities.Payload;
 import org.apache.commons.lang3.tuple.Triple;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -21,7 +22,7 @@ public class WindowFileUtils {
     static String lastWindowcase = "";
     static List<Integer> lastWindowpath = new ArrayList<>();
 
-    public static List<Payload> windowFilesToTriple(String testcase, String paths) throws WindowFileException{
+    public static List<Payload> windowFilesToTriple(String testcase, String paths, String recordFile) throws WindowFileException{
 
         StringBuilder stringBuilder = new StringBuilder();
 
@@ -75,7 +76,7 @@ public class WindowFileUtils {
             //如果上个window的最后一条path未结束,将它加到pathList，总path数加1。将上一个窗口的最后一个case加到caselist第一个
             if (firstpath.length() != 0){
                 //从record文件中读取上一轮的case和path
-                readFromRecordFile();
+                readFromRecordFile(recordFile);
                 int index = 0;
                 ArrayList<Integer> path = new ArrayList<>();
                 while (index < firstpath.length()) {
@@ -138,13 +139,12 @@ public class WindowFileUtils {
 
         lastWindowcase = cases_list.get(cases_list.size()-1);
         lastWindowpath = paths_list.get(paths_list.size()-1);
-        recordLastWindowcaseandpath();
+        recordLastWindowcaseandpath(recordFile);
         return payloads;
     }
 
     // 记录上个窗口的最后一个case和path
-    public static void recordLastWindowcaseandpath(){
-        String fileName = "/home/wj/pofChain/AFL/recordFile";
+    public static void recordLastWindowcaseandpath(String fileName){
         try (FileOutputStream fos = new FileOutputStream(fileName);
              DataOutputStream dos = new DataOutputStream(fos)) {
             dos.writeInt(lastWindowcase.length());
@@ -159,8 +159,7 @@ public class WindowFileUtils {
     }
 
     //从record文件中读取
-    public static void readFromRecordFile() {
-        String fileName = "/home/wj/pofChain/AFL/recordFile"; // 文件名
+    public static void readFromRecordFile(String fileName) {
         File file = new File(fileName);
         if (!file.exists()) {
             try {
@@ -227,7 +226,7 @@ public class WindowFileUtils {
             System.out.println("num=" + num);
             List<Payload> triples =
                     WindowFileUtils.windowFilesToTriple("/home/wj/pofChain/AFL/afl_testfiles/window_testcases/testcase_" + num,
-                            "/home/wj/pofChain/AFL/afl_testfiles/window_paths/testfile_" + num);
+                            "/home/wj/pofChain/AFL/afl_testfiles/window_paths/testfile_" + num, "");
             num ++;
             for (int i = 0; i < triples.size(); i++) {
                 Payload triple = triples.get(i);

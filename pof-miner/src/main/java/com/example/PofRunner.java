@@ -10,6 +10,7 @@ import com.example.web.service.MiningService;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -23,6 +24,7 @@ public class PofRunner {
     private String repo;
     private RocksDBStore dbStore;
     private final CmdArgsParser parser;
+
 
     public PofRunner(String[] args) {
         parser = CmdArgsParser.getInstance(args);
@@ -108,13 +110,8 @@ public class PofRunner {
         properties.setProperty("p2p.port", parser.getOption("p2p.port", "2345"));
 
         // load common properties
-        properties.setProperty("genesis.address", "127.0.0.1");
-        properties.setProperty("genesis.port", "2345");
-        // 待测程序队列
-        String programDirectory = "/home/wj/pofChain/programQueue/";
-        properties.setProperty("targetProgramQueueDir", programDirectory);
-        File directory = new File(programDirectory);
-        directory.mkdirs();
+        properties.setProperty("genesis.address", parser.getOption("genesis.address", "127.0.0.1"));
+        properties.setProperty("genesis.port", parser.getOption("genesis.port", "2345"));
 
         // disable tio logs
         properties.setProperty("logging.level.org.tio.server", "off");

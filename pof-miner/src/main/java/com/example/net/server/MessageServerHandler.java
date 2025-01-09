@@ -69,6 +69,7 @@ public class MessageServerHandler {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
         // 先检查该区块是否本地已存在
         if (chainService.getBlockByHash(newBlock.getHash()) != null) {
+            logger.info("该高度已有区块");
             return null;
         }
         if (!validationService.processNewMinedBlock(newBlock)) {
@@ -113,6 +114,7 @@ public class MessageServerHandler {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
         // 先检查该区块是否本地已存在
         if (chainService.getBlockByHash(newBlock.getHash()) != null) {
+            logger.info("该高度已有区块");
             return null;
         }
         if (!validationService.processNewMinedBlock(newBlock)) {
@@ -130,6 +132,7 @@ public class MessageServerHandler {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
         // 先检查该区块是否本地已存在
         if (chainService.getBlockByHash(newBlock.getHash()) != null) {
+            logger.info("该高度已有区块");
             return null;
         }
         if (!validationService.processNewMinedBlock(newBlock)) {

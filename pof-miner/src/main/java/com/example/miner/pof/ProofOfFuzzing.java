@@ -54,10 +54,10 @@ public class ProofOfFuzzing {
     public void executeCommand(String command) {
         ProcessBuilder processBuilder = new ProcessBuilder();
 //        指定工作目录
-        processBuilder.directory(new java.io.File("/home/wj/pofChain/AFL"));
+//        processBuilder.directory(new java.io.File("/home/wj/pofChain/AFL"));
 
         // Linux command
-        processBuilder.command("afl-fuzz", "-i", "fuzz_in/", "-o", "fuzz_out", "./afl_testfiles/objfiles/string_length");
+        processBuilder.command("afl-fuzz", "-i", "AFL/fuzz_in/", "-o", "AFL/fuzz_out", "./AFL/afl_testfiles/objfiles/string_length");
 
         try {
             Process process = processBuilder.start();
@@ -72,8 +72,8 @@ public class ProofOfFuzzing {
                     List<Payload> triples;
                     try {
                         triples = WindowFileUtils.windowFilesToTriple(
-                                "/home/wj/pofChain/AFL/afl_testfiles/window_testcases/testcase_" + num,
-                                "/home/wj/pofChain/AFL/afl_testfiles/window_paths/testfile_" + num);
+                                "AFL/afl_testfiles/window_testcases/testcase_" + num,
+                                "AFL/afl_testfiles/window_paths/testfile_" + num, "");
                         num ++;
                     } catch (WindowFileException e) {
                         throw new RuntimeException(e);

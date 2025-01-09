@@ -3322,6 +3322,7 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
   s32 fd;
   u8  keeping = 0, res;
 
+// fault为crash_mode模式
   if (fault == crash_mode) {
 
     /* Keep only if there are new bits in the map, add to queue for
@@ -3342,9 +3343,11 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
     fn = alloc_printf("%s/queue/id_%06u", out_dir, queued_paths);
 
 #endif /* ^!SIMPLE_FILES */
-
+    printf("=================crash_mode=%d\n=============", crash_mode);
+    printf("=================fault=%d\n=============", fault);
     add_to_queue(fn, len, 0);
 
+//   hnb == 2表明发现了新路径
     if (hnb == 2) {
       queue_top->has_new_cov = 1;
       queued_with_cov++;
@@ -3368,6 +3371,9 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
     keeping = 1;
 
   }
+
+  printf("=================crash_mode=%d\n=============", crash_mode);
+  printf("=================fault=%d\n=============", fault);
 
   switch (fault) {
 
@@ -4197,7 +4203,7 @@ static void show_stats(void) {
     // if (cycles_wo_finds < 25 || min_wo_finds < 30) strcpy(tmp, cYEL); else
 
     /* No finds for a long time and no test cases to try. */
-    if (queue_cycle > 4){
+    if (queue_cycle > 6){
       //  strcpy(tmp, cLGN);
        // 达到条件，自动停止AFL
        int pid = getpid();
@@ -7190,8 +7196,8 @@ static void handle_timeout(int sig) {
 
         if(child_pid > 0){
           kill(child_pid, SIGSTOP);
-          sprintf(case_dest, "./afl_testfiles/windows/window_testcases/testcase_%d", testfile_id);
-          sprintf(path_dest, "./afl_testfiles/windows/window_paths/testfile_%d", testfile_id);
+          sprintf(case_dest, "../fuzzingfiles/windows/window_testcases/testcase_%d", testfile_id);
+          sprintf(path_dest, "../fuzzingfiles/windows/window_paths/testfile_%d", testfile_id);
 //          printf("==========================================");
           // 处理这个窗口的path和case
           printf("testfile_id=%d\n", testfile_id);
@@ -7209,8 +7215,8 @@ static void handle_timeout(int sig) {
           char next_case_dest[50];
           char next_path_dest[50];
 
-          sprintf(next_case_dest, "./afl_testfiles/windows/window_testcases/testcase_%d", testfile_id);
-          sprintf(next_path_dest, "./afl_testfiles/windows/window_paths/testfile_%d", testfile_id);
+          sprintf(next_case_dest, "../fuzzingfiles/windows/window_testcases/testcase_%d", testfile_id);
+          sprintf(next_path_dest, "../fuzzingfiles/windows/window_paths/testfile_%d", testfile_id);
           FILE *new_case_file = fopen(next_case_dest, "w");
           FILE *new_path_file = fopen(next_path_dest, "w");
           fclose(new_case_file);
@@ -7220,8 +7226,8 @@ static void handle_timeout(int sig) {
         }
         else{
 //          printf("复制前child_pid=%d, cnt = %d\n", child_pid, ++childpidzerocnt);
-          sprintf(case_dest, "./afl_testfiles/windows/window_testcases/testcase_%d", testfile_id);
-          sprintf(path_dest, "./afl_testfiles/windows/window_paths/testfile_%d", testfile_id);
+          sprintf(case_dest, "../fuzzingfiles/windows/window_testcases/testcase_%d", testfile_id);
+          sprintf(path_dest, "../fuzzingfiles/windows/window_paths/testfile_%d", testfile_id);
           copy_by_char(case_dest, case_source);
           copy_by_char(path_dest, path_source);
 //          printf("复制后child_pid=%d, cnt = %d\n",  child_pid, childpidzerocnt);
@@ -7235,8 +7241,8 @@ static void handle_timeout(int sig) {
          char next_case_dest[50];
          char next_path_dest[50];
 
-         sprintf(next_case_dest, "./afl_testfiles/windows/window_testcases/testcase_%d", testfile_id);
-         sprintf(next_path_dest, "./afl_testfiles/windows/window_paths/testfile_%d", testfile_id);
+         sprintf(next_case_dest, "../fuzzingfiles/windows/window_testcases/testcase_%d", testfile_id);
+         sprintf(next_path_dest, "../fuzzingfiles/windows/window_paths/testfile_%d", testfile_id);
          FILE *new_case_file = fopen(next_case_dest, "w");
          FILE *new_path_file = fopen(next_path_dest, "w");
          fclose(new_case_file);
@@ -8538,7 +8544,7 @@ int main(int argc, char** argv) {
       }
 
       /* If we had a full queue cycle with no new finds, try
-         recombination strategies next. */
+         recombination strategies next. queue_path不变，说明一整个循环未发现新路径 */
 
       if (queued_paths == prev_queued) {   // 如果一轮执行后queue中的case数与执行前一样，表示没有发现新的case
 

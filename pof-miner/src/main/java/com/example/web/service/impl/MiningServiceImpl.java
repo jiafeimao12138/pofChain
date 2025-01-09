@@ -35,6 +35,7 @@ import java.math.BigInteger;
 import java.nio.file.*;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.regex.*;
 
 /**
  * @author jiafeimao
@@ -61,10 +62,9 @@ public class MiningServiceImpl implements MiningService {
     private int hitCount = 0;
     private long endWindow = 0;
     private long lastWindowEnd = System.currentTimeMillis();
-    private long fileNum = 0;
     private Peer supplier;
 
-    @Value("${targetProgramQueueDir}")
+    @Value("${fuzzer.targetProgramDir}")
     private String targetProgramQueueDir;
     @Value("${fuzzer.fuzz_out}")
     private String fuzzOut;
@@ -76,6 +76,8 @@ public class MiningServiceImpl implements MiningService {
     private String output;
     @Value("${afl.directory}")
     private String aflDirectory;
+    @Value("${fuzzer.window.record}")
+    private String recordFile;
 
     Path path = null;
     //TODO: 每挖出x个区块更改一次head，类比bitcoin
@@ -92,10 +94,10 @@ public class MiningServiceImpl implements MiningService {
     @Override
     public void startMining() {
         path = Paths.get(output);
-        if (!deleteAFLFiles()) {
-            logger.info("删除AFL文件错误");
-            return;
-        }
+//        if (!deleteAFLFiles()) {
+//            logger.info("删除AFL文件错误");
+//            return;
+//        }
         new Thread(() -> {
             logger.info("开始监控窗口文件");
             //@TODO: 动态调整难度
@@ -115,6 +117,9 @@ public class MiningServiceImpl implements MiningService {
             try {
                 Pair<String, Peer> targetProgram;
                 ArrayDeque<MutablePair<byte[], Peer>> queue = programQueue.getProgramQueue();
+                // 如果不存在program文件夹就生成
+                File directory = new File(targetProgramQueueDir);
+                directory.mkdirs();
                 targetProgram = programService.chooseTargetProgram(targetProgramQueueDir, queue);
                 if (targetProgram == null) {
                     logger.info("待测程序队列为空，当前无待测程序");
@@ -131,7 +136,7 @@ public class MiningServiceImpl implements MiningService {
 
     public void executeCommand(String targetProgram) {
         ProcessBuilder processBuilder = new ProcessBuilder();
-//        指定工作目录
+//        指定工作目录，必须是AFL，否则会段错误
         processBuilder.directory(new java.io.File(aflDirectory));
         String fuzzOutDir = fuzzOut + node1.getAddress().substring(0,6);
         processBuilder.command("afl-fuzz", "-i", fuzzIn , "-o", fuzzOutDir , targetProgram);
@@ -154,6 +159,12 @@ public class MiningServiceImpl implements MiningService {
         Path testcases_dir = Paths.get(windowFiles + "/window_testcases");
         Path path_dir = Paths.get(windowFiles + "/window_paths");
         try {
+            if (Files.notExists(testcases_dir)) {
+                Files.createDirectories(testcases_dir);
+            }
+            if (Files.notExists(path_dir)) {
+                Files.createDirectories(path_dir);
+            }
             // 创建 WatchService
             WatchService watchService = FileSystems.getDefault().newWatchService();
             // 注册目录以监控创建事件
@@ -226,17 +237,23 @@ public class MiningServiceImpl implements MiningService {
         List<Transaction> transactions = new ArrayList<>();
         triples = WindowFileUtils.windowFilesToTriple(
                 testcaseFile.toAbsolutePath().toString(),
-                pathFile.toAbsolutePath().toString());
+                pathFile.toAbsolutePath().toString(),
+                recordFile
+                );
         // 向中间值添加本轮挖矿的path信息，等到新区块成功挖出后再置空
         payloads.addPayloads(triples);
-        logger.info("本次处理文件num={}", ++fileNum);
+        if(!extractTrailingNumber(testcaseFile.toString()).equals(extractTrailingNumber(pathFile.toString()))) {
+            logger.error("错误！！！读取窗口文件错误！！！,{},{}", testcaseFile, pathFile);
+        }
+        int fileNum = extractTrailingNumber(testcaseFile.toString());
+        logger.info("本次处理文件num={}", fileNum);
         // 每20个文件清理一次
-        if(fileNum % 20 == 1) {
+        if(fileNum % 20 == 1 && fileNum > 1) {
             for (int i = 1; i <= 20; i++) {
                 deleteFile(windowFiles + "/window_testcases/testcase_" + (fileNum- 21 + i));
                 deleteFile(windowFiles + "/window_paths/testfile_" + (fileNum- 21 + i));
             }
-//            logger.info("本次清理完毕, num={}", num);
+            logger.info("本次清理完毕, 范围是{}到{}", fileNum - 20, fileNum - 1);
         }
         Block preBlock = chainService.getLocalLatestBlock();
         logger.info("本次计算区块hash的preBlock：高度为{}, Hash为{}", preBlock.getBlockHeader().getHeight(), preBlock.getHash());
@@ -418,6 +435,16 @@ public class MiningServiceImpl implements MiningService {
         return res;
     }
 
+    public Integer extractTrailingNumber(String str) {
+        Pattern pattern = Pattern.compile("(\\d+)$");  // 匹配字符串末尾的数字
+        Matcher matcher = pattern.matcher(str);
+
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));  // 提取并转换为整型
+        }
+
+        return null;  // 如果没有找到数字，返回 null
+    }
 
 
 }
