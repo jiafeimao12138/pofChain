@@ -1,7 +1,7 @@
 package com.example.web.controller;
 
 import com.example.base.entities.*;
-import com.example.base.utils.CryptoUtils;
+import com.example.base.crypto.CryptoUtils;
 import com.example.base.utils.SerializeUtils;
 import com.example.fuzzed.ProgramService;
 import com.example.net.base.MessagePacket;

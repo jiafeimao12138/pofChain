@@ -1,6 +1,6 @@
 package com.example.net.client;
 
-import com.example.base.entities.Block;
+import com.example.base.entities.block.Block;
 import com.example.base.entities.Peer;
 import com.example.base.entities.ProgramQueue;
 import com.example.base.utils.SerializeUtils;

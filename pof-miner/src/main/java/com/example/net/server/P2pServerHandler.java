@@ -1,6 +1,5 @@
 package com.example.net.server;
 
-import com.example.base.entities.Block;
 import com.example.base.entities.Node;
 import com.example.base.entities.NodeType;
 import com.example.base.entities.Peer;
@@ -8,10 +7,7 @@ import com.example.base.utils.SerializeUtils;
 import com.example.net.base.BaseTioHandler;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.commons.lang3.tuple.Pair;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.tio.core.ChannelContext;
@@ -20,8 +16,6 @@ import org.tio.core.intf.Packet;
 import org.tio.server.intf.TioServerHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Resource;
 
 @Component
 public class P2pServerHandler extends BaseTioHandler implements TioServerHandler {

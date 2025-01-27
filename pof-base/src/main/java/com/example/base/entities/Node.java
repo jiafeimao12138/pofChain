@@ -1,7 +1,6 @@
 package com.example.base.entities;
 
-import com.example.base.utils.CryptoUtils;
-import org.springframework.stereotype.Component;
+import com.example.base.crypto.CryptoUtils;
 
 import java.util.Random;
 

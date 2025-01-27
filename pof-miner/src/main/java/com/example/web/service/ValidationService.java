@@ -1,6 +1,6 @@
 package com.example.web.service;
 
-import com.example.base.entities.Block;
+import com.example.base.entities.block.Block;
 
 public interface ValidationService {
     boolean processNewBlock(Block block);

@@ -1,6 +1,6 @@
 package com.example.miner.pof;
 
-import com.example.base.entities.Block;
+import com.example.base.entities.block.Block;
 import com.example.miner.Miner;
 import org.springframework.stereotype.Component;
 

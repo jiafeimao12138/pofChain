@@ -1,5 +1,6 @@
 package com.example.base.entities;
 
+import com.example.base.entities.block.Block;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;

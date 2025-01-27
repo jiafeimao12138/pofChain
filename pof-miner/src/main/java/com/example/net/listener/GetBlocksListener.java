@@ -1,6 +1,6 @@
 package com.example.net.listener;
 
-import com.example.base.entities.Block;
+import com.example.base.entities.block.Block;
 import com.example.base.utils.SerializeUtils;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;

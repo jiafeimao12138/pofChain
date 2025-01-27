@@ -1,6 +1,6 @@
 package com.example.web.service.impl;
 
-import com.example.base.entities.Block;
+import com.example.base.entities.block.Block;
 import com.example.base.store.BlockPrefix;
 import com.example.base.store.DBStore;
 import com.example.net.conf.ApplicationContextProvider;

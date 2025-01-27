@@ -3,6 +3,9 @@ package com.example.web.service.impl;
 
 import com.example.base.Exception.WindowFileException;
 import com.example.base.entities.*;
+import com.example.base.entities.block.Block;
+import com.example.base.entities.block.BlockHeader;
+import com.example.base.entities.transaction.Transaction;
 import com.example.base.utils.SerializeUtils;
 import com.example.base.utils.WindowFileUtils;
 import com.example.fuzzed.ProgramService;

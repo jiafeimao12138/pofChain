@@ -1,6 +1,6 @@
 package com.example.net.events;
 
-import com.example.base.entities.Block;
+import com.example.base.entities.block.Block;
 import org.springframework.context.ApplicationEvent;
 
 public class GetBlocksEvent extends ApplicationEvent {

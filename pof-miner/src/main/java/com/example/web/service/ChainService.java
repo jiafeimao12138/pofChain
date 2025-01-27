@@ -1,7 +1,6 @@
 package com.example.web.service;
 
-import com.example.base.Exception.IllegalBlockException;
-import com.example.base.entities.Block;
+import com.example.base.entities.block.Block;
 
 public interface ChainService {
     void syncBlockChain(long height);

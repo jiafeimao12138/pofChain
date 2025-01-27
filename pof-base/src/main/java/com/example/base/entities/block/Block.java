@@ -1,13 +1,10 @@
-package com.example.base.entities;
+package com.example.base.entities.block;
 
-import com.example.base.utils.CryptoUtils;
+import com.example.base.entities.transaction.Transaction;
+import com.example.base.crypto.CryptoUtils;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.apache.commons.lang3.tuple.Triple;
-import org.springframework.util.StringUtils;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

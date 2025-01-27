@@ -1,6 +1,6 @@
 package com.example.net.listener;
 
-import com.example.base.entities.Block;
+import com.example.base.entities.block.Block;
 import com.example.base.utils.SerializeUtils;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
@@ -12,8 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-
-import java.util.concurrent.CountDownLatch;
 
 @Component
 public class BlockEventListener {

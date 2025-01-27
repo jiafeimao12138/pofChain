@@ -1,6 +1,6 @@
 package com.example.base.entities;
 
-import com.example.base.utils.CryptoUtils;
+import com.example.base.crypto.CryptoUtils;
 
 public class Peer {
     private String id;

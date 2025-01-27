@@ -1,16 +1,15 @@
 package com.example.miner.pof;
 
 import com.example.base.Exception.WindowFileException;
-import com.example.base.entities.Block;
-import com.example.base.entities.BlockHeader;
+import com.example.base.entities.block.Block;
+import com.example.base.entities.block.BlockHeader;
 import com.example.base.entities.Payload;
-import com.example.base.entities.Transaction;
+import com.example.base.entities.transaction.Transaction;
 import com.example.base.store.BlockPrefix;
 import com.example.base.store.RocksDBStore;
 import com.example.base.utils.WindowFileUtils;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewBlockEvent;
-import com.example.web.service.MiningService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

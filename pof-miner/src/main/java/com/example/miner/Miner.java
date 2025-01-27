@@ -1,7 +1,7 @@
 package com.example.miner;
 
 
-import com.example.base.entities.Block;
+import com.example.base.entities.block.Block;
 
 /**
  * @author jiafeimao

@@ -1,5 +1,6 @@
-package com.example.base.entities;
+package com.example.base.entities.block;
 
+import com.example.base.entities.Payload;
 import lombok.Data;
 
 import java.util.ArrayList;

@@ -1,16 +1,14 @@
 package com.example;
 
-import com.example.base.entities.Block;
-import com.example.base.entities.BlockHeader;
+import com.example.base.entities.block.Block;
+import com.example.base.entities.block.BlockHeader;
 import com.example.base.store.BlockPrefix;
 import com.example.base.store.RocksDBStore;
 import com.example.base.utils.CmdArgsParser;
 import com.example.base.utils.SerializeUtils;
-import com.example.web.service.MiningService;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.io.File;
 import java.io.FileOutputStream;

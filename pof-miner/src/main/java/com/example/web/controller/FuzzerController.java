@@ -1,23 +1,17 @@
 package com.example.web.controller;
 
-import com.example.base.entities.Block;
+import com.example.base.entities.block.Block;
 import com.example.base.entities.Node;
 import com.example.base.entities.NodeType;
-import com.example.net.server.P2pServer;
 import com.example.web.service.ChainService;
 import com.example.web.service.MiningService;
 import com.example.web.service.ProcessService;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.tuple.MutablePair;
-import org.checkerframework.checker.units.qual.N;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
 import java.util.List;
 
 /**

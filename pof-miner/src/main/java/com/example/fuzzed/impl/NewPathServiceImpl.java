@@ -4,7 +4,7 @@ import com.example.base.entities.NewPath;
 import com.example.base.entities.Payload;
 import com.example.base.store.DBStore;
 import com.example.base.store.PathPrefix;
-import com.example.base.utils.CryptoUtils;
+import com.example.base.crypto.CryptoUtils;
 import com.example.fuzzed.NewPathService;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewPathRank;

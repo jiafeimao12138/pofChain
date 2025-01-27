@@ -1,4 +1,4 @@
-package com.example.base.utils;
+package com.example.base.crypto;
 
 /**
  * @author jiafeimao
@@ -6,6 +6,9 @@ package com.example.base.utils;
  */
 
 import java.security.MessageDigest;
+import com.example.base.utils.Sha256Hash;
+import org.bouncycastle.crypto.digests.RIPEMD160Digest;
+
 
 /**
  * 密码学工具类
@@ -41,6 +44,29 @@ public class CryptoUtils {
             builder.append(temp);
         }
         return builder.toString();
+    }
+
+    /**
+     * Calculate RIPEMD160(SHA256(input)). This is used in Address calculations.
+     * @param input bytes to hash
+     * @return RIPEMD160(SHA256(input))
+     */
+    public static byte[] sha256hash160(byte[] input) {
+        byte[] sha256 = Sha256Hash.hash(input);
+        return digestRipeMd160(sha256);
+    }
+
+    /**
+     * Calculate RIPEMD160(input).
+     * @param input bytes to hash
+     * @return RIPEMD160(input)
+     */
+    public static byte[] digestRipeMd160(byte[] input) {
+        RIPEMD160Digest digest = new RIPEMD160Digest();
+        digest.update(input, 0, input.length);
+        byte[] ripmemdHash = new byte[20];
+        digest.doFinal(ripmemdHash, 0);
+        return ripmemdHash;
     }
 }
 
