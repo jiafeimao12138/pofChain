@@ -11,6 +11,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
+import static com.example.base.utils.Preconditions.checkArgument;
+
 public class Sha256Hash implements Comparable<Sha256Hash> {
     public static final int LENGTH = 32; // bytes
     public static final Sha256Hash ZERO_HASH = wrap(new byte[LENGTH]);
@@ -42,9 +44,9 @@ public class Sha256Hash implements Comparable<Sha256Hash> {
      * @throws IllegalArgumentException if the given string is not a valid
      *         hex string, or if it does not represent exactly 32 bytes
      */
-    public static Sha256Hash wrap(String hexString) {
-        return wrap(ByteUtils.parseHex(hexString));
-    }
+//    public static Sha256Hash wrap(String hexString) {
+//        return wrap(ByteUtils.parseHex(hexString));
+//    }
 
     /**
      * Creates a new instance that wraps the given hash value, but with byte order reversed.
@@ -222,10 +224,10 @@ public class Sha256Hash implements Comparable<Sha256Hash> {
         return ByteBuffer.wrap(bytes).getInt(LENGTH - Integer.BYTES);
     }
 
-    @Override
-    public String toString() {
-        return ByteUtils.formatHex(bytes);
-    }
+//    @Override
+//    public String toString() {
+//        return ByteUtils.formatHex(bytes);
+//    }
 
     /**
      * Returns the bytes interpreted as a positive integer.

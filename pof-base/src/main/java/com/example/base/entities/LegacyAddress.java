@@ -1,5 +1,7 @@
 package com.example.base.entities;
 
+import com.example.base.entities.script.ScriptType;
+
 import java.util.Objects;
 
 public class LegacyAddress implements Address{

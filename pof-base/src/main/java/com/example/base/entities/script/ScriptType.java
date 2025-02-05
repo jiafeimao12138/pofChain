@@ -1,4 +1,4 @@
-package com.example.base.entities;
+package com.example.base.entities.script;
 
 public enum ScriptType {
     P2PKH("pkh", 1),    // pay to pubkey hash (aka pay to address)

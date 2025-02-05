@@ -1,5 +1,8 @@
 package com.example.base.entities.script;
 
+import com.example.base.utils.ByteUtils;
+import org.bitcoinj.script.Script;
+
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -16,6 +19,7 @@ import static com.example.base.entities.script.ScriptOpCodes.OP_PUSHDATA2;
 import static com.example.base.entities.script.ScriptOpCodes.OP_PUSHDATA4;
 import static com.example.base.entities.script.ScriptOpCodes.getOpCodeName;
 import static com.example.base.entities.script.ScriptOpCodes.getPushDataName;
+import static com.example.base.utils.Preconditions.checkState;
 
 /**
  * A script element that is either a data push (signature, pubkey, etc) or a non-push (logic, numeric, etc) operation.
@@ -53,10 +57,10 @@ public class ScriptChunk {
         return opcode <= OP_16;
     }
 
-    /** If this chunk is an OP_N opcode returns the equivalent integer value. */
-    public int decodeOpN() {
-        return Script.decodeFromOpN(opcode);
-    }
+//    /** If this chunk is an OP_N opcode returns the equivalent integer value. */
+//    public int decodeOpN() {
+//        return Script.decodeFromOpN(opcode);
+//    }
 
     /**
      * Called on a pushdata chunk, returns true if it uses the smallest possible way (according to BIP62) to push the data.
@@ -144,12 +148,12 @@ public class ScriptChunk {
         return opcodeLength + pushDataSizeLength + dataLength;
     }
 
-    @Override
-    public String toString() {
-        if (data == null)
-            return getOpCodeName(opcode);
-        return String.format("%s[%s]", getPushDataName(opcode), ByteUtils.formatHex(data));
-    }
+//    @Override
+//    public String toString() {
+//        if (data == null)
+//            return getOpCodeName(opcode);
+//        return String.format("%s[%s]", getPushDataName(opcode), ByteUtils.formatHex(data));
+//    }
 
     @Override
     public boolean equals(Object o) {

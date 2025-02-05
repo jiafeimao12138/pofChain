@@ -1,6 +1,6 @@
 package com.example.base.entities;
 
-import java.util.Comparator;
+import com.example.base.entities.script.ScriptType;
 
 public interface Address extends Comparable<Address>{
     /**

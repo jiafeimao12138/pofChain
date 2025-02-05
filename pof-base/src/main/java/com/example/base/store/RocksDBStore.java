@@ -4,13 +4,10 @@ import com.example.base.utils.SerializeUtils;
 import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class RocksDBStore implements DBStore{
     static final Logger logger = LoggerFactory.getLogger(RocksDBStore.class);
@@ -76,6 +73,23 @@ public class RocksDBStore implements DBStore{
         }
         return list;
     }
+
+    public <T> Map<String, T> searchforWallet(String keyPrefix)
+    {
+        Map<String, T> map = new HashMap<>();
+        RocksIterator iterator = rocksDB.newIterator(new ReadOptions());
+        for (iterator.seekToFirst(); iterator.isValid(); iterator.next()) {
+            String key = new String(iterator.key());
+            if (!key.startsWith(keyPrefix)) {
+                continue;
+            }
+            map.put(key.substring(WalletPrefix.UTXO_PREFIX.getPrefix().length()),
+                    (T) SerializeUtils.unSerialize(iterator.value()));
+        }
+        return map;
+    }
+
+
 
     public void close()
     {

@@ -7,6 +7,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+
+/**
+ * P2PKH：
+ * scriptPubKey: OP_DUP OP_HASH160 <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
+ * scriptSig: <sig> <pubKey>
+ */
 public class ScriptOpCodes {
     // push value
     public static final int OP_0 = 0x00; // push empty vector

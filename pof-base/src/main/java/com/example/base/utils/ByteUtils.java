@@ -50,6 +50,18 @@ public class ByteUtils {
         return ArrayUtils.toPrimitive(stream.toArray(Byte[]::new));
     }
 
+    public static String bytesToHex(byte[] bytes) {
+        StringBuilder hexString = new StringBuilder();
+
+        for (byte b : bytes) {
+            // 转换为无符号整数并格式化为两位十六进制
+            String hex = String.format("%02x", b & 0xFF);
+            hexString.append(hex);
+        }
+
+        return hexString.toString().toUpperCase(); // 如果需要大写，可以使用 toUpperCase()
+    }
+
     public static byte[] bigIntegerToBytes(BigInteger b, int numBytes) {
         checkArgument(b.signum() >= 0, () -> "b must be positive or zero: " + b);
         checkArgument(numBytes > 0, () -> "numBytes must be positive: " + numBytes);
