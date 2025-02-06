@@ -5,6 +5,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.stream.Stream;
 
 import java.io.IOException;
@@ -52,15 +53,30 @@ public class ByteUtils {
 
     public static String bytesToHex(byte[] bytes) {
         StringBuilder hexString = new StringBuilder();
-
         for (byte b : bytes) {
-            // 转换为无符号整数并格式化为两位十六进制
-            String hex = String.format("%02x", b & 0xFF);
-            hexString.append(hex);
+            hexString.append(String.format("%02x", b)); // %02x 代表2位十六进制
         }
-
-        return hexString.toString().toUpperCase(); // 如果需要大写，可以使用 toUpperCase()
+        return hexString.toString();
     }
+
+    public static byte[] hexToBytes(String hex) {
+        int len = hex.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
+                    + Character.digit(hex.charAt(i + 1), 16));
+        }
+        return data;
+    }
+
+    public static String byteArrayToBase64(byte[] bytes) {
+        return Base64.getEncoder().encodeToString(bytes);
+    }
+
+    public static byte[] base64ToByteArray(String base64) {
+        return Base64.getDecoder().decode(base64);
+    }
+
 
     public static byte[] bigIntegerToBytes(BigInteger b, int numBytes) {
         checkArgument(b.signum() >= 0, () -> "b must be positive or zero: " + b);

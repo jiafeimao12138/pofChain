@@ -15,8 +15,8 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    public int getBalance(String address) {
-        List<TXOutput> utxOs = UTXOSet.findUTXOs(Wallet.getPubKey(address));
+    public int getBalance(Wallet wallet) {
+        List<TXOutput> utxOs = UTXOSet.findUTXOs(wallet.getPubKeyHash());
         int balance = 0;
         for (TXOutput utxO : utxOs) {
             balance += utxO.getValue();

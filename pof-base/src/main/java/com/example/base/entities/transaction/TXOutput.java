@@ -8,11 +8,8 @@ import lombok.NoArgsConstructor;
 import java.util.Arrays;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
 public class TXOutput {
-
-    private Transaction parentTransaction;
 
     /**
      * 数值
@@ -28,28 +25,19 @@ public class TXOutput {
         this.pubKeyHash = pubKeyHash;
     }
 
+
+    /**
+     * 创建交易输出
+     * 把address还原为pubKeyHash
+     * @param value
+     * @param address
+     * @return
+     */
     public static TXOutput newTXOutput(int value, String address) {
         // 反向转化为 byte 数组
         byte[] versionedPayload = Base58Check.base58ToBytes(address);
         byte[] pubKeyHash = Arrays.copyOfRange(versionedPayload, 1, versionedPayload.length);
         return new TXOutput(value, pubKeyHash);
-    }
-
-    /**
-     * 创建交易输出
-     *
-     * @param value
-     * @param address
-     * @return
-     */
-    public static TXOutput newTXOutput(Transaction parentTransaction, int value, String address) {
-        // 反向转化为 byte 数组
-        byte[] versionedPayload = Base58Check.base58ToBytes(address);
-//        if (versionedPayload.length != 25) {
-//            throw new IllegalArgumentException("Invalid address length");
-//        }
-        byte[] pubKeyHash = Arrays.copyOfRange(versionedPayload, 1, versionedPayload.length);
-        return new TXOutput(parentTransaction, value, pubKeyHash);
     }
 
     /**

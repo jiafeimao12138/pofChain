@@ -12,6 +12,8 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.collect.Maps;
 
@@ -23,6 +25,8 @@ import org.springframework.util.CollectionUtils;
 public class UTXOSet {
 
     private final DBStore dbStore;
+    private static ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+    private static Lock readLock = rwl.readLock();
 
     public UTXOSet(DBStore dbStore) {
         this.dbStore = dbStore;
@@ -34,6 +38,7 @@ public class UTXOSet {
      * @param amount     花费金额
      */
     public SpendableOutputResult findSpendableOutputs(byte[] pubKeyHash, int amount) {
+        readLock.lock();
         Map<String, List<Integer>> thisUtxoMap = new HashMap<>();
         int accumulated = 0;
         Map<String, Object> utxoMap = dbStore.searchforWallet(WalletPrefix.UTXO_PREFIX.getPrefix());
@@ -47,9 +52,8 @@ public class UTXOSet {
                     List<Integer> indexList = thisUtxoMap.get(TxId);
                     if (CollectionUtils.isEmpty(indexList)) {
                         indexList = new ArrayList<>();
-                    } else {
-                        indexList.add(i);
                     }
+                    indexList.add(i);
                     thisUtxoMap.put(TxId, indexList);
                 } else if (accumulated >= amount) {
                     break;
@@ -61,6 +65,7 @@ public class UTXOSet {
             return new SpendableOutputResult(accumulated, null);
         }
         dbStore.close();
+        readLock.unlock();
         return new SpendableOutputResult(accumulated, thisUtxoMap);
     }
 
@@ -85,6 +90,24 @@ public class UTXOSet {
         }
         dbStore.close();
         return utxos;
+    }
+
+    /**
+     * 通过TXId索引该Transaction的TxOutputs
+     * @param TXId
+     * @return
+     */
+    public static List<TXOutput> getPreUTXO(String TXId) {
+        readLock.lock();
+        List<TXOutput> txOutputs = new ArrayList<>();
+        DBStore dbStore = new RocksDBStore("/home/wj/datastore/wallet");
+        Optional<Object> o = dbStore.get(WalletPrefix.UTXO_PREFIX.getPrefix() + TXId);
+        if (o.isPresent()) {
+            txOutputs = (List<TXOutput>)o.get();
+        }
+        dbStore.close();
+        readLock.unlock();
+        return txOutputs;
     }
 //
 //    /**

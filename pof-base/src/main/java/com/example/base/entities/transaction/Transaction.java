@@ -4,10 +4,12 @@ import com.example.base.entities.wallet.Wallet;
 import com.example.base.entities.wallet.WalletUtils;
 import com.example.base.store.RocksDBStore;
 import com.example.base.utils.BtcAddressUtils;
+import com.example.base.utils.ByteUtils;
 import com.example.base.utils.SerializeUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
@@ -44,7 +46,7 @@ public class Transaction {
     /**
      * 交易的Hash
      */
-    private byte[] txId;
+    private transient byte[] txId;
     /**
      * 交易输入
      */
@@ -56,23 +58,30 @@ public class Transaction {
     /**
      * 创建日期
      */
-    private long createTime = System.currentTimeMillis();
+    @NonNull private long createTime;
 
     public TXInput addInput(TXInput input) {
-        input.setParent(this);
         inputs.add(input);
         return input;
     }
 
+    public void addInputs(List<TXInput> inputs) {
+        this.inputs.addAll(inputs);
+    }
+
     public TXOutput addOutput(TXOutput output) {
-        output.setParentTransaction(this);
         outputs.add(output);
         return output;
+    }
+
+    public void addOutputs(List<TXOutput> outputs) {
+        this.outputs.addAll(outputs);
     }
 
     public byte[] getTxId() {
         return Sha256Hash.hashTwice(SerializeUtils.serialize(this));
     }
+
 
     /**
      * 创建CoinBase交易
@@ -89,8 +98,9 @@ public class Transaction {
         coinBaseTX.addInput(txInput);
 
         // 创建交易输出
-        TXOutput txOutput = TXOutput.newTXOutput(coinBaseTX, 10 , toAddress);
+        TXOutput txOutput = TXOutput.newTXOutput(10 , toAddress);
         coinBaseTX.addOutput(txOutput);
+        coinBaseTX.setCreateTime(System.currentTimeMillis());
         return coinBaseTX;
     }
 
@@ -135,10 +145,10 @@ public class Transaction {
     public static Transaction newUTXOTransaction(String fromAddress, String toAddress, int amount) throws Exception {
         // 获取钱包
         Wallet senderWallet = WalletUtils.getInstance().getWallet(fromAddress);
-        byte[] pubKey = senderWallet.getPublicKey();
-        byte[] pubKeyHash = BtcAddressUtils.ripeMD160Hash(pubKey);
+        byte[] pubKeyHash = senderWallet.getPubKeyHash();
+        byte[] publicKey = senderWallet.getPublicKey();
 
-        SpendableOutputResult result = new UTXOSet(new RocksDBStore("/home/wj/wallet")).findSpendableOutputs(pubKeyHash, amount);
+        SpendableOutputResult result = new UTXOSet(new RocksDBStore("/home/wj/datastore/wallet")).findSpendableOutputs(pubKeyHash, amount);
         int accumulated = result.getAccumulated();
         // 找零
         int change = accumulated - amount;
@@ -154,7 +164,7 @@ public class Transaction {
         for (Map.Entry<String, List<Integer>> entry : entrySet) {
             String txIdStr = entry.getKey();
             List<Integer> outIds = entry.getValue();
-            byte[] txId = Hex.decodeHex(txIdStr);
+            byte[] txId = ByteUtils.hexToBytes(txIdStr);
             for (Integer outIndex : outIds) {
                 // 添加交易输入和签名
                 newTx.addInput(new TXInput(txId, outIndex));
@@ -167,9 +177,11 @@ public class Transaction {
         if (change > 0) {
             txOutputs.add(TXOutput.newTXOutput((accumulated - amount), fromAddress));
         }
+        newTx.addOutputs(txOutputs);
+        newTx.setCreateTime(System.currentTimeMillis());
         newTx.setTxId(newTx.getTxId());
         // 签名
-        newTx.sign(senderWallet.getPrivateKey());
+        newTx.sign(senderWallet.getPrivateKey(), publicKey);
         return newTx;
     }
 
@@ -181,7 +193,7 @@ public class Transaction {
 //    public byte[] hash() {
 //        // 使用序列化的方式对Transaction对象进行深度复制
 //        byte[] serializeBytes = SerializeUtils.serialize(this);
-//        Transaction copyTx = (Transaction) SerializeUtils.deserialize(serializeBytes);
+//        Transaction copyTx = (Transaction) SerializeUtils.unSerialize(serializeBytes);
 //        copyTx.setTxId(new byte[]{});
 //        return DigestUtils.sha256(SerializeUtils.serialize(copyTx));
 //    }
@@ -200,20 +212,23 @@ public class Transaction {
      *
      * @return
      */
+    @Deprecated
     public Transaction trimmedCopy() {
-        TXInput[] tmpTXInputs = new TXInput[this.getInputs().size()];
+        List<TXInput> TXInputsCopyList = new ArrayList<>();
+//        获取交易输入
         for (int i = 0; i < this.getInputs().size(); i++) {
             TXInput txInput = this.getInputs().get(i);
-            tmpTXInputs[i] = new TXInput(txInput., txInput.getTxOutputIndex(), null, null);
+            TXInputsCopyList.add(new TXInput(txInput.getPreviousTXId(), txInput.getTxOutputIndex()));
         }
 
-        TXOutput[] tmpTXOutputs = new TXOutput[this.getOutputs().size()];
+//       获取交易输出
+        List<TXOutput> TXOutputCopyList = new ArrayList<>();
         for (int i = 0; i < this.getOutputs().size(); i++) {
             TXOutput txOutput = this.getOutputs().get(i);
-            tmpTXOutputs[i] = new TXOutput(txOutput.getValue(), txOutput.getPubKeyHash());
+            TXOutputCopyList.add(new TXOutput(txOutput.getValue(), txOutput.getPubKeyHash()));
         }
 
-        return new Transaction(this.getTxId(), tmpTXInputs, tmpTXOutputs, this.getCreateTime());
+        return new Transaction(this.getTxId(), TXInputsCopyList, TXOutputCopyList, this.getCreateTime());
     }
 
 
@@ -221,52 +236,40 @@ public class Transaction {
      * 签名
      *
      * @param privateKey 私钥
+     * @param pubKey 明文公钥
      */
-    public void sign(BCECPrivateKey privateKey) throws Exception {
+    public void sign(BCECPrivateKey privateKey, byte[] pubKey) throws Exception {
         // coinbase 交易信息不需要签名，因为它不存在交易输入信息
         if (this.isCoinbase()) {
             return;
         }
-        // 再次验证一下交易信息中的交易输入是否正确，也就是能否查找对应的交易数据
-        for (TXInput txInput : this.getInputs()) {
-            if (prevTxMap.get(Hex.encodeHexString(txInput.getParent().getTxId())) == null) {
-                throw new RuntimeException("ERROR: Previous transaction is not correct");
-            }
-        }
-
-        // 创建用于签名的交易信息的副本
-        Transaction txCopy = this.trimmedCopy();
 
         Security.addProvider(new BouncyCastleProvider());
         Signature ecdsaSign = Signature.getInstance("SHA256withECDSA", BouncyCastleProvider.PROVIDER_NAME);
         ecdsaSign.initSign(privateKey);
 
-        for (int i = 0; i < txCopy.getInputs().size(); i++) {
-            TXInput txInputCopy = txCopy.getInputs().get(i);
-            // 获取交易输入TxID对应的交易数据
-            Transaction prevTx = prevTxMap.get(Hex.encodeHexString(txInputCopy.getTxId()));
-            // 获取交易输入所对应的上一笔交易中的交易输出
-            TXOutput prevTxOutput = prevTx.getOutputs()[txInputCopy.getTxOutputIndex()];
-            txInputCopy.setPubKey(prevTxOutput.getPubKeyHash());
-            txInputCopy.setSignature(null);
-            // 得到要签名的数据，即交易ID
-//            txCopy.setTxId(txCopy.hash());
-            txInputCopy.setPubKey(null);
+        for (int i = 0; i < this.getInputs().size(); i++) {
+//            获取第i个交易输入
+            TXInput txInputCopy = this.getInputs().get(i);
+//            将ScriptSig用占位符替代
+            txInputCopy.setScriptSig("OP_0".getBytes());
+            this.setTxId(this.getTxId());
 
-            // 对整个交易信息仅进行签名，即对交易ID进行签名
-            ecdsaSign.update(txCopy.getTxId());
+            // 得到要签名的数据(不包括TXId)
+            byte[] tobeSigned = Sha256Hash.hashTwice(SerializeUtils.serialize(this));
+
+            // 对整个交易信息进行签名
+            ecdsaSign.update(tobeSigned);
             byte[] signature = ecdsaSign.sign();
 
-            // 将整个交易数据的签名赋值给交易输入，因为交易输入需要包含整个交易信息的签名
+            // 将整个交易数据的签名以及自己的公钥赋值给交易输入，因为交易输入需要包含整个交易信息的签名
             // 注意是将得到的签名赋值给原交易信息中的交易输入
-            this.getInputs()[i].setSignature(signature);
+            this.getInputs().get(i).setScriptSig(signature, pubKey);
+
+            verifyTransaction(tobeSigned);
         }
-
     }
 
-    public String calculateSignature(String sigKey, String pubKey, TXInput txInput) {
-
-    }
 
 
     /**
@@ -274,56 +277,53 @@ public class Transaction {
 //     * @param prevTxMap 前面多笔交易集合
      * @return
      */
-//    public boolean verify(Map<String, Transaction> prevTxMap) throws Exception {
-//        // coinbase 交易信息不需要签名，也就无需验证
-//        if (this.isCoinbase()) {
-//            return true;
-//        }
-//
-//        // 再次验证一下交易信息中的交易输入是否正确，也就是能否查找对应的交易数据
-//        for (TXInput txInput : this.getInputs()) {
-//            if (prevTxMap.get(Hex.encodeHexString(txInput.getTxId())) == null) {
-//                throw new RuntimeException("ERROR: Previous transaction is not correct");
-//            }
-//        }
-//
-//        // 创建用于签名验证的交易信息的副本
-//        Transaction txCopy = this.trimmedCopy();
-//
-//        Security.addProvider(new BouncyCastleProvider());
-//        ECParameterSpec ecParameters = ECNamedCurveTable.getParameterSpec("secp256k1");
-//        KeyFactory keyFactory = KeyFactory.getInstance("ECDSA", BouncyCastleProvider.PROVIDER_NAME);
-//        Signature ecdsaVerify = Signature.getInstance("SHA256withECDSA", BouncyCastleProvider.PROVIDER_NAME);
-//
-//        for (int i = 0; i < this.getInputs().length; i++) {
-//            TXInput txInput = this.getInputs()[i];
-//            // 获取交易输入TxID对应的交易数据
-//            Transaction prevTx = prevTxMap.get(Hex.encodeHexString(txInput.getTxId()));
-//            // 获取交易输入所对应的上一笔交易中的交易输出
-//            TXOutput prevTxOutput = prevTx.getOutputs()[txInput.getTxOutputIndex()];
-//
-//            TXInput txInputCopy = txCopy.getInputs()[i];
-//            txInputCopy.setSignature(null);
-//            txInputCopy.setPubKey(prevTxOutput.getPubKeyHash());
-//            // 得到要签名的数据，即交易ID
-////            txCopy.setTxId(txCopy.hash());
-//            txInputCopy.setPubKey(null);
-//
-//            // 使用椭圆曲线 x,y 点去生成公钥Key
-//            BigInteger x = new BigInteger(1, Arrays.copyOfRange(txInput.getPubKey(), 1, 33));
-//            BigInteger y = new BigInteger(1, Arrays.copyOfRange(txInput.getPubKey(), 33, 65));
-//            ECPoint ecPoint = ecParameters.getCurve().createPoint(x, y);
-//
-//            ECPublicKeySpec keySpec = new ECPublicKeySpec(ecPoint, ecParameters);
-//            PublicKey publicKey = keyFactory.generatePublic(keySpec);
-//            ecdsaVerify.initVerify(publicKey);
-//            ecdsaVerify.update(txCopy.getTxId());
-//            if (!ecdsaVerify.verify(txInput.getSignature())) {
-//                return false;
-//            }
-//        }
-//        return true;
-//    }
+    public boolean verifyTransaction(byte[] tobeVerifiedHash) throws Exception {
+        // coinbase 交易信息不需要签名，也就无需验证
+        if (this.isCoinbase()) {
+            return true;
+        }
+
+        Security.addProvider(new BouncyCastleProvider());
+        ECParameterSpec ecParameters = ECNamedCurveTable.getParameterSpec("secp256k1");
+        KeyFactory keyFactory = KeyFactory.getInstance("ECDSA", BouncyCastleProvider.PROVIDER_NAME);
+        Signature ecdsaVerify = Signature.getInstance("SHA256withECDSA", BouncyCastleProvider.PROVIDER_NAME);
+
+        // 逐条校验TXInput
+        for (int i = 0; i < this.getInputs().size(); i++) {
+            TXInput txInput = this.getInputs().get(i);
+            // 获取交易输入的PreTxID对应的utxo
+            List<TXOutput> preUTXO = UTXOSet.getPreUTXO(txInput.getPreTXIdStr());
+            TXOutput prevTxOutput = preUTXO.get(txInput.getTxOutputIndex());
+            // 获取utxo中的pubkeyHash
+            byte[] pubKeyHash = prevTxOutput.getPubKeyHash();
+            // 获取当前txinput的ScriptSig(即<signature, pubKey>)
+            byte[] signature = txInput.getSig();
+            byte[] pubKey = txInput.getPubKey();
+            // 1. 计算Hash160(Hash256(pubKey))
+            byte[] hash = Sha256Hash.hash(pubKey);
+            // 2. 做RIPEMD-160计算
+            byte[] ripemdHashedKey = BtcAddressUtils.ripeMD160Hash(hash);
+            // 3. 将ripemdHashedKey和pubKeyHash比较
+            if (!Arrays.equals(ripemdHashedKey, pubKeyHash)) {
+                return false;
+            }
+            // 4. 验证签名是否有效,使用ScriptKey中提供的公钥验证
+            // 使用椭圆曲线 x,y 点去生成公钥Key
+            BigInteger x = new BigInteger(1, Arrays.copyOfRange(pubKey, 1, 33));
+            BigInteger y = new BigInteger(1, Arrays.copyOfRange(pubKey, 33, 65));
+            ECPoint ecPoint = ecParameters.getCurve().createPoint(x, y);
+
+            ECPublicKeySpec keySpec = new ECPublicKeySpec(ecPoint, ecParameters);
+            PublicKey publicKey = keyFactory.generatePublic(keySpec);
+            ecdsaVerify.initVerify(publicKey);
+            ecdsaVerify.update(tobeVerifiedHash);
+            if (!ecdsaVerify.verify(signature)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 
 
     @Override

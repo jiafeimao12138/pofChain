@@ -5,6 +5,7 @@ import com.example.base.utils.BtcAddressUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.bitcoinj.base.Sha256Hash;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
 import org.bouncycastle.jce.ECNamedCurveTable;
@@ -54,6 +55,7 @@ public class Wallet implements Serializable {
 
             byte[] publicKeyBytes = publicKey.getQ().getEncoded(false);
 
+            // 设置私钥、公钥
             this.setPrivateKey(privateKey);
             this.setPublicKey(publicKeyBytes);
         } catch (Exception e) {
@@ -90,7 +92,7 @@ public class Wallet implements Serializable {
     public String getAddress() {
         try {
             // 1. 获取 ripemdHashedKey
-            byte[] ripemdHashedKey = BtcAddressUtils.ripeMD160Hash(this.getPublicKey());
+            byte[] ripemdHashedKey = this.getPubKeyHash();
 
             // 2. 添加版本 0x00
             ByteArrayOutputStream addrStream = new ByteArrayOutputStream();
@@ -98,8 +100,11 @@ public class Wallet implements Serializable {
             addrStream.write(ripemdHashedKey);
             byte[] versionedPayload = addrStream.toByteArray();
 
-            // 3. 计算校验码
-            byte[] checksum = BtcAddressUtils.checksum(versionedPayload);
+            // 3. 二次Hash
+            byte[] TwiceHash = Sha256Hash.hashTwice(versionedPayload);
+
+            // 4. 取Hash值的前四字节作为校验和
+            byte[] checksum = BtcAddressUtils.checksum(TwiceHash);
 
             // 4. 得到 version + paylod + checksum 的组合
             addrStream.write(checksum);
@@ -113,10 +118,16 @@ public class Wallet implements Serializable {
         throw new RuntimeException("Fail to get wallet address ! ");
     }
 
-    public static byte[] getPubKey(String address) {
-        // 反向转化为 byte 数组
-        byte[] versionedPayload = Base58Check.base58ToBytes(address);
-        return Arrays.copyOfRange(versionedPayload, 1, versionedPayload.length);
+    /**
+     * scriptPubKey中的PubKeyHash部分
+     * @return
+     */
+    public byte[] getPubKeyHash() {
+        // 1. 对公钥做sha-256哈希
+        byte[] hash = Sha256Hash.hash(this.publicKey);
+        // 2. 做RIPEMD-160计算
+        byte[] ripemdHashedKey = BtcAddressUtils.ripeMD160Hash(hash);
+        return ripemdHashedKey;
     }
 
 
