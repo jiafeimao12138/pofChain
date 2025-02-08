@@ -37,4 +37,6 @@ public interface MessagePacketType
     byte PROGRAM_QUEUQ_RESP = -11;
     // 终止Fuzzing
     byte TERMINATE_FUZZING = 12;
+    // 广播新交易
+    byte BROADCAST_TX = 13;
 }

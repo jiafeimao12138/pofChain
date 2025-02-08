@@ -3,6 +3,7 @@ package com.example.net.server;
 import com.example.base.entities.Node;
 import com.example.base.entities.NodeType;
 import com.example.base.entities.Peer;
+import com.example.base.entities.transaction.Transaction;
 import com.example.base.utils.SerializeUtils;
 import com.example.net.base.BaseTioHandler;
 import com.example.net.base.MessagePacket;
@@ -103,6 +104,15 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 logger.info("收到终止AFL消息");
                 serverHandler.terminatingAFL();
                 break;
+            case MessagePacketType.BROADCAST_TX:
+                logger.info("收到新交易");
+                Transaction transaction = (Transaction) SerializeUtils.unSerialize(msgBody);
+                boolean result = serverHandler.processNewTransaction(transaction);
+                if (!result) {
+                    logger.info("检查到交易不合法：{}", transaction.getTxIdStr());
+                }
+            default:
+                logger.error("错误消息！！！");
         }
         logger.info("server回复client: channelContext:{}", channelContext);
         if (responsePacket != null){

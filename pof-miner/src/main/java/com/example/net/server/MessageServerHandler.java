@@ -2,6 +2,10 @@ package com.example.net.server;
 
 import com.example.base.entities.*;
 import com.example.base.entities.block.Block;
+import com.example.base.entities.transaction.Transaction;
+import com.example.base.store.DBStore;
+import com.example.base.store.WalletPrefix;
+import com.example.base.utils.ByteUtils;
 import com.example.base.utils.SerializeUtils;
 import com.example.fuzzed.NewPathService;
 import com.example.net.base.MessagePacket;
@@ -13,10 +17,7 @@ import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewBlockEvent;
 import com.example.net.events.NewPeerEvent;
 import com.example.net.events.TerminateAFLEvent;
-import com.example.web.service.ChainService;
-import com.example.web.service.PeerService;
-import com.example.web.service.ProcessService;
-import com.example.web.service.ValidationService;
+import com.example.web.service.*;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.slf4j.Logger;
@@ -26,6 +27,8 @@ import org.tio.client.ClientChannelContext;
 import org.tio.core.Node;
 
 import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 // 处理其他node发送的message request
 @Component
@@ -42,7 +45,12 @@ public class MessageServerHandler {
     private final NewPathManager newPathManager;
     private final ProgramQueue programQueue;
     private final ProcessService processService;
+    private final TransactionService transactionService;
     private final com.example.base.entities.Node node;
+    private final DBStore dbStore;
+
+    private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+    private final Lock writeLock = rwl.writeLock();
 
 
     public synchronized MessagePacket helloMessage(byte[] msgBody) {
@@ -257,6 +265,33 @@ public class MessageServerHandler {
                 logger.info("已终止Fuzzing进程，进程号{}", processID);
                 ApplicationContextProvider.publishEvent(new TerminateAFLEvent(1));
             }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 处理收到的交易
+     * @param transaction
+     * @return 返回true表示该交易合法
+     */
+    public synchronized boolean processNewTransaction(Transaction transaction) {
+        try {
+            if (!transactionService.verify(transaction)) {
+                return false;
+            }
+            // 存储到mempool
+            transactionService.storeMempool(transaction);
+            // 持久化存储
+            writeLock.lock();
+            String txId = ByteUtils.bytesToHex(transaction.getTxId());
+            dbStore.put(WalletPrefix.TX_PREFIX.getPrefix() + txId, transaction);
+            dbStore.put(WalletPrefix.UTXO_PREFIX.getPrefix() + txId, transaction.getOutputs());
+            //@TODO 后面看要不要手动释放
+//        dbStore.close();
+            writeLock.unlock();
+            logger.info("已将交易{}存入数据库", txId);
+            return true;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

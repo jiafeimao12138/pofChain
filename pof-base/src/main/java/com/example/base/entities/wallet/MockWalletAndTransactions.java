@@ -8,6 +8,7 @@ import com.example.base.store.RocksDBStore;
 import com.example.base.store.WalletPrefix;
 import com.example.base.utils.ByteUtils;
 import org.apache.commons.codec.binary.Hex;
+import org.omg.IOP.TransactionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +50,8 @@ public class MockWalletAndTransactions {
 
         rocksDBStore.close();
         // 钱包余额查询
-        List<TXOutput> utxOs = UTXOSet.findUTXOs(wallet.getPubKeyHash());
+        UTXOSet utxoSet = null;
+        List<TXOutput> utxOs = utxoSet.findUTXOs(wallet.getPubKeyHash());
         int balance = 0;
         for (TXOutput utxO : utxOs) {
             balance += utxO.getValue();
@@ -61,7 +63,8 @@ public class MockWalletAndTransactions {
         // 创建钱包B，表示用户B
         Wallet wallet1 = WalletUtils.getInstance().createWallet();
         String address1 = wallet1.getAddress();
-        Transaction utxoTransaction = Transaction.newUTXOTransaction(address, address1, 3);
+//        Transaction utxoTransaction = Transaction.newUTXOTransaction(address, address1, 3);
+        Transaction utxoTransaction = Transaction.newCoinbaseTX(address,1);
         byte[] utxoTransactionTxId = utxoTransaction.getTxId();
         String utxoTXIdStr = ByteUtils.bytesToHex(utxoTransactionTxId);
         List<TXOutput> outputs = utxoTransaction.getOutputs();
@@ -69,7 +72,11 @@ public class MockWalletAndTransactions {
         DBStore rocksDBStore1 = new RocksDBStore("/home/wj/datastore/wallet");
         rocksDBStore1.put(WalletPrefix.UTXO_PREFIX.getPrefix() + utxoTXIdStr, outputs);
         rocksDBStore1.close();
-        List<TXOutput> utxOs1 = UTXOSet.findUTXOs(wallet1.getPubKeyHash());
+        // 校验
+        boolean b = utxoTransaction.verifyTransaction();
+        System.out.println("校验交易是否合法：" + b);
+        // 查询钱包余额
+        List<TXOutput> utxOs1 = utxoSet.findUTXOs(wallet1.getPubKeyHash());
         int balance1 = 0;
         for (TXOutput utxO : utxOs1) {
             balance1 += utxO.getValue();

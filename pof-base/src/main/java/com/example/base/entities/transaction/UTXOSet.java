@@ -1,73 +1,27 @@
 package com.example.base.entities.transaction;
 
-import com.example.base.entities.block.Block;
 import com.example.base.store.DBStore;
 import com.example.base.store.RocksDBStore;
 import com.example.base.store.WalletPrefix;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.Synchronized;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.lang3.ArrayUtils;
-
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.common.collect.Maps;
-
-import com.example.base.utils.SerializeUtils;
-import org.rocksdb.RocksDB;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Import;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-
+@Component
+@RequiredArgsConstructor
 public class UTXOSet {
 
     private final DBStore dbStore;
     private static ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private static Lock readLock = rwl.readLock();
 
-    public UTXOSet(DBStore dbStore) {
-        this.dbStore = dbStore;
-    }
-    /**
-     * 寻找能够花费的交易
-     *
-     * @param pubKeyHash 钱包公钥Hash
-     * @param amount     花费金额
-     */
-    public SpendableOutputResult findSpendableOutputs(byte[] pubKeyHash, int amount) {
-        readLock.lock();
-        Map<String, List<Integer>> thisUtxoMap = new HashMap<>();
-        int accumulated = 0;
-        Map<String, Object> utxoMap = dbStore.searchforWallet(WalletPrefix.UTXO_PREFIX.getPrefix());
-        for (Map.Entry<String, Object> entry : utxoMap.entrySet()) {
-            String TxId = entry.getKey();
-            List<TXOutput> txOutputList = (List<TXOutput>)entry.getValue();
-            for (int i = 0; i < txOutputList.size(); i++) {
-                if (txOutputList.get(i).isLockedWithKey(pubKeyHash) && accumulated < amount) {
-                    accumulated += txOutputList.get(i).getValue();
-//                    把该UTXO加入到本次需要花费的列表中
-                    List<Integer> indexList = thisUtxoMap.get(TxId);
-                    if (CollectionUtils.isEmpty(indexList)) {
-                        indexList = new ArrayList<>();
-                    }
-                    indexList.add(i);
-                    thisUtxoMap.put(TxId, indexList);
-                } else if (accumulated >= amount) {
-                    break;
-                }
-            }
-        }
-        // 如果所有UTXO都不够
-        if (amount > accumulated) {
-            return new SpendableOutputResult(accumulated, null);
-        }
-        dbStore.close();
-        readLock.unlock();
-        return new SpendableOutputResult(accumulated, thisUtxoMap);
-    }
+
 
     /**
      * 查找钱包地址对应的所有UTXO
@@ -75,8 +29,8 @@ public class UTXOSet {
      * @param pubKeyHash 钱包公钥Hash
      * @return
      */
-    public static List<TXOutput> findUTXOs(byte[] pubKeyHash) {
-        DBStore dbStore = new RocksDBStore("/home/wj/datastore/wallet");
+    public  List<TXOutput> findUTXOs(byte[] pubKeyHash) {
+        readLock.lock();
         List<TXOutput> utxos = new ArrayList<>();
         List<List<TXOutput>> utxoList = dbStore.search(WalletPrefix.UTXO_PREFIX.getPrefix());
         System.out.println("utxoList size: " + utxoList.size());
@@ -89,6 +43,7 @@ public class UTXOSet {
             }
         }
         dbStore.close();
+        readLock.unlock();
         return utxos;
     }
 

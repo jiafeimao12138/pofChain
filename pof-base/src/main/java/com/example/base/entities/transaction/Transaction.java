@@ -82,6 +82,14 @@ public class Transaction {
         return Sha256Hash.hashTwice(SerializeUtils.serialize(this));
     }
 
+    /**
+     * 获取string类型的txId
+     * @return
+     */
+    public String getTxIdStr() {
+        return ByteUtils.bytesToHex(this.getTxId());
+    }
+
 
     /**
      * 创建CoinBase交易
@@ -134,56 +142,6 @@ public class Transaction {
 //        return tx;
 //    }
 
-    /**
-     * 从 from 向  to 支付一定的 amount 的金额
-     *
-     * @param fromAddress       支付钱包地址
-     * @param toAddress    收款方地址
-     * @param amount     交易金额
-     * @return
-     */
-    public static Transaction newUTXOTransaction(String fromAddress, String toAddress, int amount) throws Exception {
-        // 获取钱包
-        Wallet senderWallet = WalletUtils.getInstance().getWallet(fromAddress);
-        byte[] pubKeyHash = senderWallet.getPubKeyHash();
-        byte[] publicKey = senderWallet.getPublicKey();
-
-        SpendableOutputResult result = new UTXOSet(new RocksDBStore("/home/wj/datastore/wallet")).findSpendableOutputs(pubKeyHash, amount);
-        int accumulated = result.getAccumulated();
-        // 找零
-        int change = accumulated - amount;
-        Map<String, List<Integer>> unspentOuts = result.getUnspentOuts();
-
-        if (result.getUnspentOuts() == null) {
-            log.error("ERROR: Not enough funds ! accumulated=" + accumulated + ", amount=" + amount);
-            throw new RuntimeException("ERROR: Not enough funds ! ");
-        }
-        Set<Map.Entry<String, List<Integer>>> entrySet = unspentOuts.entrySet();
-        Transaction newTx = new Transaction();
-        // 生成交易输入
-        for (Map.Entry<String, List<Integer>> entry : entrySet) {
-            String txIdStr = entry.getKey();
-            List<Integer> outIds = entry.getValue();
-            byte[] txId = ByteUtils.hexToBytes(txIdStr);
-            for (Integer outIndex : outIds) {
-                // 添加交易输入和签名
-                newTx.addInput(new TXInput(txId, outIndex));
-            }
-        }
-        // 生成交易输出，包括付款方和找零
-        List<TXOutput> txOutputs = new ArrayList<>();
-        txOutputs.add(TXOutput.newTXOutput(amount, toAddress));
-        // 找零
-        if (change > 0) {
-            txOutputs.add(TXOutput.newTXOutput((accumulated - amount), fromAddress));
-        }
-        newTx.addOutputs(txOutputs);
-        newTx.setCreateTime(System.currentTimeMillis());
-        newTx.setTxId(newTx.getTxId());
-        // 签名
-        newTx.sign(senderWallet.getPrivateKey(), publicKey);
-        return newTx;
-    }
 
     /**
      * 计算交易信息的Hash值
@@ -199,12 +157,11 @@ public class Transaction {
 //    }
 
     /**
-     * 是否为 Coinbase 交易
-     *
+     * @TODO 是否为 Coinbase 交易
      * @return
      */
     public boolean isCoinbase() {
-        return this.getInputs().size() == 0;
+        return false;
     }
 
     /**
@@ -265,11 +222,28 @@ public class Transaction {
             // 将整个交易数据的签名以及自己的公钥赋值给交易输入，因为交易输入需要包含整个交易信息的签名
             // 注意是将得到的签名赋值给原交易信息中的交易输入
             this.getInputs().get(i).setScriptSig(signature, pubKey);
-
-            verifyTransaction(tobeSigned);
         }
     }
 
+    public boolean verifyTransaction() throws Exception {
+        // coinbase 交易信息不需要签名，因为它不存在交易输入信息
+        if (this.isCoinbase()) {
+            return true;
+        }
+        for (int i = 0; i < this.getInputs().size(); i++) {
+//            获取第i个交易输入
+            TXInput txInputCopy = this.getInputs().get(i);
+//            将ScriptSig用占位符替代
+            txInputCopy.setScriptSig("OP_0".getBytes());
+            this.setTxId(this.getTxId());
+
+            // 得到要签名的数据(不包括TXId)
+            byte[] tobeSigned = Sha256Hash.hashTwice(SerializeUtils.serialize(this));
+            if (!doverify(tobeSigned))
+                return false;
+        }
+        return true;
+    }
 
 
     /**
@@ -277,12 +251,7 @@ public class Transaction {
 //     * @param prevTxMap 前面多笔交易集合
      * @return
      */
-    public boolean verifyTransaction(byte[] tobeVerifiedHash) throws Exception {
-        // coinbase 交易信息不需要签名，也就无需验证
-        if (this.isCoinbase()) {
-            return true;
-        }
-
+    private boolean doverify(byte[] tobeVerifiedHash) throws Exception {
         Security.addProvider(new BouncyCastleProvider());
         ECParameterSpec ecParameters = ECNamedCurveTable.getParameterSpec("secp256k1");
         KeyFactory keyFactory = KeyFactory.getInstance("ECDSA", BouncyCastleProvider.PROVIDER_NAME);

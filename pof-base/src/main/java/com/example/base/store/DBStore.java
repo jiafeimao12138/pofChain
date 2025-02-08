@@ -1,9 +1,12 @@
 package com.example.base.store;
 
+import org.springframework.stereotype.Component;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@Component
 public interface DBStore {
     boolean put(String key, Object value);
 
