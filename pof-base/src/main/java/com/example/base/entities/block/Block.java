@@ -16,6 +16,8 @@ import java.util.Objects;
 
 @Data
 public class Block implements Serializable {
+    public final static int BLOCK_MAX_SIZE = 1 * 1024 * 1024;
+
 //    header
     private BlockHeader blockHeader;
     private List<Transaction> transactions = new ArrayList<>();

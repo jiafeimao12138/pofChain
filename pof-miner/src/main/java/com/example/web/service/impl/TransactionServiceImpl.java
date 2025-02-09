@@ -33,8 +33,8 @@ public class TransactionServiceImpl implements TransactionService {
      * @return
      */
     @Override
-    public Transaction createCoinbaseTransaction(String address, int height) {
-        return Transaction.newCoinbaseTX(address, height);
+    public Transaction createCoinbaseTransaction(String address, int height, int blockReward, int fee) {
+        return Transaction.newCoinbaseTX(address, height, blockReward, fee);
     }
 
     /**
@@ -46,16 +46,16 @@ public class TransactionServiceImpl implements TransactionService {
      * @throws Exception
      */
     @Override
-    public Transaction createCommonTransaction(String fromAddress, String toAddress, int amount) throws Exception {
+    public Transaction createCommonTransaction(String fromAddress, String toAddress, int amount, int fee) throws Exception {
         // 获取钱包
         Wallet senderWallet = WalletUtils.getInstance().getWallet(fromAddress);
         byte[] pubKeyHash = senderWallet.getPubKeyHash();
         byte[] publicKey = senderWallet.getPublicKey();
 
-        SpendableOutputResult result = findSpendableOutputs(pubKeyHash, amount);
+        SpendableOutputResult result = findSpendableOutputs(pubKeyHash, amount + fee);
         int accumulated = result.getAccumulated();
         // 找零
-        int change = accumulated - amount;
+        int change = accumulated - amount - fee;
         Map<String, List<Integer>> unspentOuts = result.getUnspentOuts();
 
         if (result.getUnspentOuts() == null) {
@@ -81,6 +81,7 @@ public class TransactionServiceImpl implements TransactionService {
         if (change > 0) {
             txOutputs.add(TXOutput.newTXOutput((accumulated - amount), fromAddress));
         }
+        newTx.setFee(fee);
         newTx.addOutputs(txOutputs);
         newTx.setCreateTime(System.currentTimeMillis());
         newTx.setTxId(newTx.getTxId());

@@ -7,6 +7,7 @@ import com.example.base.store.DBStore;
 import com.example.base.store.WalletPrefix;
 import com.example.base.utils.ByteUtils;
 import com.example.base.utils.SerializeUtils;
+import com.example.exception.TransactionNotExistException;
 import com.example.fuzzed.NewPathService;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
@@ -16,7 +17,9 @@ import com.example.net.client.P2pClient;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewBlockEvent;
 import com.example.net.events.NewPeerEvent;
+import com.example.net.events.NewTransactionEvent;
 import com.example.net.events.TerminateAFLEvent;
+import com.example.supplier.Reward;
 import com.example.web.service.*;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -46,8 +49,10 @@ public class MessageServerHandler {
     private final ProgramQueue programQueue;
     private final ProcessService processService;
     private final TransactionService transactionService;
+    private final WalletService walletService;
     private final com.example.base.entities.Node node;
     private final DBStore dbStore;
+    private final Reward reward;
 
     private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private final Lock writeLock = rwl.writeLock();
@@ -73,7 +78,7 @@ public class MessageServerHandler {
     }
 
     //fuzzer处理接收到的新区块
-    public synchronized MessagePacket receiveNewBlock(byte[] msgBody, String address) {
+    public synchronized MessagePacket receiveNewBlock_fuzzer(byte[] msgBody) throws TransactionNotExistException {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
         // 先检查该区块是否本地已存在
         if (chainService.getBlockByHash(newBlock.getHash()) != null) {
@@ -84,12 +89,15 @@ public class MessageServerHandler {
             logger.info("校验新区块失败, hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
             return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, false), "校验新区块失败");
         }
+        // 移除已打包的交易
+        validationService.removeTransactions(newBlock);
         logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
         // 广播给其他peer
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
         // 存储新区块后，需要汇报该Fuzzer自己本轮挖掘出的path信息,并附上新区块
         payloads.setNewBlock(newBlock);
-        // @TODO: fuzzerAddress获取
+        // fuzzerAddress获取
+        String address = walletService.getWalletAddress(0);
         payloads.setAddress(address);
         MessagePacket messagePacket = new MessagePacket();
         messagePacket.setType(MessagePacketType.PAYLOADS_SUBMIT);
@@ -118,7 +126,7 @@ public class MessageServerHandler {
     }
 
     // observer处理接收到的新节点，不需要提交payloads
-    public synchronized MessagePacket receiveNewBlock_observer(byte[] msgBody){
+    public synchronized MessagePacket receiveNewBlock_observer(byte[] msgBody) throws TransactionNotExistException {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
         // 先检查该区块是否本地已存在
         if (chainService.getBlockByHash(newBlock.getHash()) != null) {
@@ -129,6 +137,8 @@ public class MessageServerHandler {
             logger.info("校验新区块失败, hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
             return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, false), "校验新区块失败");
         }
+        // 移除已打包的交易
+        validationService.removeTransactions(newBlock);
         logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
         // 广播给其他peer
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
@@ -136,7 +146,7 @@ public class MessageServerHandler {
     }
 
     // supplier处理接收到的新节点, 如果成功添加新区块，则发布新路径贡献排名
-    public synchronized MessagePacket receiveNewBlock_supplier(byte[] msgBody) {
+    public synchronized MessagePacket receiveNewBlock_supplier(byte[] msgBody) throws Exception {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
         // 先检查该区块是否本地已存在
         if (chainService.getBlockByHash(newBlock.getHash()) != null) {
@@ -147,12 +157,28 @@ public class MessageServerHandler {
             logger.info("校验新区块失败, hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
             return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, false), "校验新区块失败");
         }
+        // 移除已打包的交易
+        validationService.removeTransactions(newBlock);
         logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
         // 广播给其他peer
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
         // 发布新路径贡献度排名
         HashMap<String, List<NewPath>> pathMap = newPathManager.getPaths();
-        newPathService.NewPathContributionRank(pathMap);
+        Map<String, List<NewPath>> newPathContributionRank = newPathService.NewPathContributionRank(pathMap);
+        // 发送新路径奖励
+        // TODO: 发送新路径奖励要这样强制么？目前交易费设置为0
+        ArrayList<Map.Entry<String, List<NewPath>>> rankList = new ArrayList<>(newPathContributionRank.entrySet());
+        int newPathQuota = reward.getRewardValue(Reward.REWARDTYPE.NPATH_QUOTA);
+        for (int i = 0; i < Math.min(newPathQuota, rankList.size()); i++) {
+            Map.Entry<String, List<NewPath>> entry = rankList.get(i);
+            List<NewPath> newPathList = entry.getValue();
+            String address = entry.getKey();
+            int rewardValue = newPathList.size() * Transaction.NEW_PATH_REWARD;
+            Transaction rewardTX = transactionService.createCommonTransaction(walletService.getWalletAddress(0), address, rewardValue, 0);
+            // 广播
+            ApplicationContextProvider.publishEvent(new NewTransactionEvent(rewardTX));
+        }
+        logger.info("supplier已将本轮新路径奖励全部发放");
         return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, true), "成功");
     }
 

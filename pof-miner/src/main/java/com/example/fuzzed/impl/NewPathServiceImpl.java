@@ -78,7 +78,7 @@ public class NewPathServiceImpl implements NewPathService {
 
 
     @Override
-    public void NewPathContributionRank(HashMap<String, List<NewPath>> groupNewPath) {
+    public Map<String, List<NewPath>> NewPathContributionRank(HashMap<String, List<NewPath>> groupNewPath) {
         // 根据Fuzzer挖出的新路径数量倒序排序
         Comparator<List<NewPath>> comparator = new Comparator<List<NewPath>>() {
             @Override
@@ -98,6 +98,7 @@ public class NewPathServiceImpl implements NewPathService {
         // 广播
         ApplicationContextProvider.publishEvent(new NewPathRank(sortedmap));
         logger.info("已广播本轮Fuzzing的新路径排名");
+        return sortedmap;
     }
 
 }

@@ -1,8 +1,12 @@
 package com.example.web.service.impl;
 
 import com.example.base.entities.block.Block;
+import com.example.base.entities.transaction.Transaction;
 import com.example.base.store.BlockPrefix;
 import com.example.base.store.DBStore;
+import com.example.base.store.WalletPrefix;
+import com.example.exception.TransactionNotExistException;
+import com.example.net.base.Mempool;
 import com.example.web.service.ChainService;
 import com.example.web.service.ValidationService;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -23,6 +28,7 @@ public class ValidationServiceImpl implements ValidationService {
     private final Lock writeLock = rwl.writeLock();
     private final ChainService chainService;
     private final DBStore dbStore;
+    private final Mempool mempool;
 
     private final int MIN_BLOCKS_TO_KEEP = 10;
 
@@ -131,5 +137,24 @@ public class ValidationServiceImpl implements ValidationService {
 
         }
         return false;
+    }
+
+    /**
+     * 移除已经打包好的交易，去掉coinbase交易
+     * @param block
+     * @return
+     */
+    @Override
+    public boolean removeTransactions(Block block) throws TransactionNotExistException {
+        List<Transaction> transactionList = block.getTransactions();
+        for (int i = 1; i < transactionList.size(); i++) {
+            String txIdStr = transactionList.get(i).getTxIdStr();
+            mempool.removeTransaction(txIdStr);
+            if (!dbStore.delete(WalletPrefix.TX_PREFIX.getPrefix() + txIdStr) ||
+            !dbStore.delete(WalletPrefix.UTXO_PREFIX.getPrefix() + txIdStr)) {
+                throw new TransactionNotExistException(txIdStr);
+            }
+        }
+        return true;
     }
 }

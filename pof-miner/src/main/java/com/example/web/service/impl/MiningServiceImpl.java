@@ -8,16 +8,16 @@ import com.example.base.entities.block.BlockHeader;
 import com.example.base.entities.transaction.Transaction;
 import com.example.base.utils.SerializeUtils;
 import com.example.base.utils.WindowFileUtils;
+import com.example.exception.TransactionNotExistException;
 import com.example.fuzzed.ProgramService;
+import com.example.net.base.Mempool;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
 import com.example.net.client.P2pClient;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewBlockEvent;
 import com.example.net.events.TerminateAFLEvent;
-import com.example.web.service.ChainService;
-import com.example.web.service.MiningService;
-import com.example.web.service.ValidationService;
+import com.example.web.service.*;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -30,10 +30,7 @@ import org.tio.client.ClientChannelContext;
 import org.tio.core.Node;
 
 import javax.annotation.PostConstruct;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.math.BigInteger;
 import java.nio.file.*;
 import java.security.SecureRandom;
@@ -61,6 +58,9 @@ public class MiningServiceImpl implements MiningService {
     private final ProgramQueue programQueue;
     private List<Payload> triples;
     private final com.example.base.entities.Node node1;
+    private final Mempool mempool;
+    private final TransactionService transactionService;
+    private final WalletService walletService;
 
     private int hitCount = 0;
     private long endWindow = 0;
@@ -81,6 +81,8 @@ public class MiningServiceImpl implements MiningService {
     private String aflDirectory;
     @Value("${fuzzer.window.record}")
     private String recordFile;
+    @Value("${wallet.address}")
+    private String addressFilePath;
 
     Path path = null;
     //TODO: 每挖出x个区块更改一次head，类比bitcoin
@@ -236,8 +238,6 @@ public class MiningServiceImpl implements MiningService {
                               Path pathFile,
                               BigInteger head,
                               BigInteger end) throws WindowFileException, IOException, InterruptedException {
-        // @TODO 选择transactions
-        List<Transaction> transactions = new ArrayList<>();
         triples = WindowFileUtils.windowFilesToTriple(
                 testcaseFile.toAbsolutePath().toString(),
                 pathFile.toAbsolutePath().toString(),
@@ -260,6 +260,12 @@ public class MiningServiceImpl implements MiningService {
         }
         Block preBlock = chainService.getLocalLatestBlock();
         logger.info("本次计算区块hash的preBlock：高度为{}, Hash为{}", preBlock.getBlockHeader().getHeight(), preBlock.getHash());
+
+        // 从mempool中选择transactions
+        List<Transaction> transactions = chooseTransactions();
+        // 在交易列表最前端加上coinbase交易
+        Transaction coinbaseTX = createCoinbaseTX(transactions, 0, preBlock.getBlockHeader().getHeight());
+        transactions.set(0, coinbaseTX);
         Block newBlock = computeWindowHash(preBlock, transactions, triples);
         String newHash = newBlock.getHash();
 
@@ -285,7 +291,7 @@ public class MiningServiceImpl implements MiningService {
         Random random = new Random();
         long nonce = random.nextLong();
         long timestamp = System.currentTimeMillis();
-        long height = preBlock.getBlockHeader().getHeight() + 1;
+        int height = preBlock.getBlockHeader().getHeight() + 1;
 
         Block newBlock = new Block();
         BlockHeader blockHeader = new BlockHeader();
@@ -319,7 +325,7 @@ public class MiningServiceImpl implements MiningService {
         hitCount ++;
         logger.info("挖矿成功，新区块高度为{}，hash={}，前一个区块hash={}",
                 newBlock.getBlockHeader().getHeight(), newHash,newBlock.getBlockHeader().getHashPreBlock());
-        // 广播
+        // 广播新区块
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
         logger.info("广播新Block,hash={}", newHash);
         endWindow = System.currentTimeMillis();
@@ -331,8 +337,8 @@ public class MiningServiceImpl implements MiningService {
         if (validationService.processNewMinedBlock(newBlock)) {
             // 提交给supplier
             payloads.setNewBlock(newBlock);
-            // @TODO: fuzzerAddress获取
-            String address = node1.getAddress();
+            // fuzzerAddress获取
+            String address = walletService.getWalletAddress(0);
             payloads.setAddress(address);
             MessagePacket messagePacket = new MessagePacket();
             messagePacket.setType(MessagePacketType.PAYLOADS_SUBMIT);
@@ -357,12 +363,58 @@ public class MiningServiceImpl implements MiningService {
                 ClientChannelContext channelContext = p2pClient.connect(new Node(supplier.getIp(), supplier.getPort()));
                 p2pClient.sendToNode(channelContext, messagePacket);
                 payloads.setNull();
-                return true;
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
+
+            // 移除mempool和数据库中已打包的交易
+            try {
+                validationService.removeTransactions(newBlock);
+            } catch (TransactionNotExistException e) {
+                logger.error("移除已打包的交易失败");
+            }
+            return true;
         }
         return false;
+    }
+
+    /**
+     * 从mempool中选择待打包的交易
+     * 使用贪心算法选择交易费用高的交易
+     */
+    private List<Transaction> chooseTransactions() {
+        Map<Transaction, Double> txOrderByFees = mempool.txOrderByFees();
+        ArrayList<Transaction> transactions = new ArrayList<>();
+        int totalSize = 0;
+        for (Map.Entry<Transaction, Double> entry : txOrderByFees.entrySet()) {
+            Transaction transaction = entry.getKey();
+            int size = mempool.getObjectSize(transaction);
+            totalSize += size;
+            if (totalSize > Block.BLOCK_MAX_SIZE)
+                break;
+            transactions.add(transaction);
+        }
+        return transactions;
+    }
+
+    private Transaction createCoinbaseTX(List<Transaction> transactions, int index, int height) {
+        // 计算所有的fee
+        int feeTotal = transactions.stream().mapToInt(Transaction::getFee).sum();
+        // 获取收款地址
+        List<String> addresses = new ArrayList<>();
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(addressFilePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                addresses.add(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        String address = addresses.get(index);
+        Transaction coinbaseTransaction = transactionService.
+                createCoinbaseTransaction(address, height, Transaction.BLOCK_REWARD, feeTotal);
+        return coinbaseTransaction;
     }
     
     @Override

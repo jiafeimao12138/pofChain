@@ -34,15 +34,18 @@ import java.security.Signature;
 import java.util.*;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
 @Slf4j
 public class Transaction {
     private static final Integer OUT_PUT_VALUE = 210000;
     /**
-     * 100 UB 创世奖励再加100UB
+     * 挖矿奖励
      */
-    private static final Integer CREATION_VALUE = 1000000 * 100;
+    public final static int BLOCK_REWARD = 100;
+    /**
+     * 新路径奖励
+     */
+    public final static int NEW_PATH_REWARD = 5;
     /**
      * 交易的Hash
      */
@@ -59,6 +62,17 @@ public class Transaction {
      * 创建日期
      */
     @NonNull private long createTime;
+    /**
+     * 交易费
+     */
+    private int fee = 0;
+
+    public Transaction(byte[] txId, List<TXInput> inputs, List<TXOutput> outputs, long createTime) {
+        this.txId = txId;
+        this.inputs = inputs;
+        this.outputs = outputs;
+        this.createTime = createTime;
+    }
 
     public TXInput addInput(TXInput input) {
         inputs.add(input);
@@ -98,7 +112,7 @@ public class Transaction {
      * @param blockHeight
      * @return
      */
-    public static Transaction newCoinbaseTX(String toAddress, int blockHeight) {
+    public static Transaction newCoinbaseTX(String toAddress, int blockHeight, int blockReward, int fee) {
         Transaction coinBaseTX = new Transaction();
         // 创建交易输入
         byte[] coinBaseData = ByteBuffer.allocate(4).putInt(blockHeight).array();
@@ -106,7 +120,7 @@ public class Transaction {
         coinBaseTX.addInput(txInput);
 
         // 创建交易输出
-        TXOutput txOutput = TXOutput.newTXOutput(10 , toAddress);
+        TXOutput txOutput = TXOutput.newTXOutput(blockReward + fee, toAddress);
         coinBaseTX.addOutput(txOutput);
         coinBaseTX.setCreateTime(System.currentTimeMillis());
         return coinBaseTX;

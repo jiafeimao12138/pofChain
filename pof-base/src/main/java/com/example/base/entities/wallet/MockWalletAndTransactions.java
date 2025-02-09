@@ -31,7 +31,7 @@ public class MockWalletAndTransactions {
         System.out.println("wallet address : " + wallet.getAddress());
 
         // 挖矿奖励交易创建
-        Transaction coinbaseTX = Transaction.newCoinbaseTX(wallet.getAddress(), 2);
+        Transaction coinbaseTX = Transaction.newCoinbaseTX(wallet.getAddress(), 2, 10, 2);
         coinbaseTX.setCreateTime(System.currentTimeMillis());
         coinbaseTX.setTxId(coinbaseTX.getTxId());
         // 加入UTXOSet
@@ -64,7 +64,7 @@ public class MockWalletAndTransactions {
         Wallet wallet1 = WalletUtils.getInstance().createWallet();
         String address1 = wallet1.getAddress();
 //        Transaction utxoTransaction = Transaction.newUTXOTransaction(address, address1, 3);
-        Transaction utxoTransaction = Transaction.newCoinbaseTX(address,1);
+        Transaction utxoTransaction = Transaction.newCoinbaseTX(address,1, 10, 2);
         byte[] utxoTransactionTxId = utxoTransaction.getTxId();
         String utxoTXIdStr = ByteUtils.bytesToHex(utxoTransactionTxId);
         List<TXOutput> outputs = utxoTransaction.getOutputs();

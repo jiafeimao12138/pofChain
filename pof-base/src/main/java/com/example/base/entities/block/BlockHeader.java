@@ -12,7 +12,7 @@ public class BlockHeader {
     private int nVersion = 0;
     private String hashPreBlock = "";
     private String hashMerkleRoot = "";
-    private long height = 0;
+    private int height = 0;
     private long nTime = System.currentTimeMillis();
     private long nNonce = 0;
     //    当前的hash目标
@@ -27,7 +27,7 @@ public class BlockHeader {
     public BlockHeader(int nVersion,
                        String hashPreBlock,
                        String hashMerkleRoot,
-                       long height,
+                       int height,
                        long nTime,
                        long nNonce,
                        int nBits,

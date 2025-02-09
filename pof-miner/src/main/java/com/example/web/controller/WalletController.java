@@ -13,6 +13,7 @@ import com.example.web.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,8 +39,8 @@ public class WalletController {
     private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private final Lock writeLock = rwl.writeLock();
 
-    private final String filePath = "wallet_address.txt";
-
+    @Value("${wallet.address}")
+    private String filePath;
     /**
      * 创建新钱包并保存钱包数据到磁盘
      */
@@ -64,7 +65,10 @@ public class WalletController {
      * @param index 付款钱包地址的索引
      */
     @RequestMapping("sendCoin")
-    public void sendCoinAndBroadcast(@RequestParam int value, @RequestParam String toaddress, @RequestParam int index) {
+    public void sendCoinAndBroadcast(@RequestParam int value,
+                                     @RequestParam String toaddress,
+                                     @RequestParam int index,
+                                     @RequestParam int fee) {
         // 从本地文件中读取地址
         List<String> addresses = new ArrayList<>();
 
@@ -82,7 +86,7 @@ public class WalletController {
         try {
             // mock
             MockCoinbaseTX(address);
-            Transaction commonTransaction = transactionService.createCommonTransaction(address, toaddress, value);
+            Transaction commonTransaction = transactionService.createCommonTransaction(address, toaddress, value, fee);
 //            广播交易
             ApplicationContextProvider.publishEvent(new NewTransactionEvent(commonTransaction));
             transactionService.storeMempool(commonTransaction);
@@ -108,7 +112,7 @@ public class WalletController {
     }
 
     private void MockCoinbaseTX(String address) throws Exception {
-        Transaction coinbaseTransaction = transactionService.createCoinbaseTransaction(address, 1);
+        Transaction coinbaseTransaction = transactionService.createCoinbaseTransaction(address, 1, 10, 2);
         transactionService.storeMempool(coinbaseTransaction);
         writeLock.lock();
         String txId = coinbaseTransaction.getTxIdStr();
