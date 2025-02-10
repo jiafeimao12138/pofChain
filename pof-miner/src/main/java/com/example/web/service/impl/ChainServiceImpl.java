@@ -8,6 +8,10 @@ import com.example.net.events.GetBlockByHeightEvent;
 import com.example.net.events.GetHeightEvent;
 import com.example.web.service.ChainService;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -92,5 +96,25 @@ public class ChainServiceImpl implements ChainService {
         }
         readLock.unlock();
         return -1;
+    }
+
+    /**
+     * 获取本地区块链中的所有区块的高度索引
+     * @return
+     */
+    @Override
+    public List<Integer> getLocalBlocksHeight() {
+        readLock.lock();
+        ArrayList<Integer> heights = new ArrayList<>();
+        Optional<Object> o = rocksDBStore.get(BlockPrefix.HEIGHT.getPrefix());
+        int height = 0;
+        if (o.isPresent()) {
+            height = (int) o.get();
+        }
+        for (int i = height; i >= 0 ; i--) {
+            heights.add(i);
+        }
+        readLock.unlock();
+        return heights;
     }
 }

@@ -89,6 +89,7 @@ public class PofRunner {
 
         dbStore.put(BlockPrefix.BLOCK_HEIGHT_PREFIX.getPrefix() + genesisBlock.getBlockHeader().getHeight(), genesisBlock);
         dbStore.put(BlockPrefix.HEIGHT.getPrefix(), genesisBlock.getBlockHeader().getHeight());
+        dbStore.put(BlockPrefix.BLOCK_HASH_PREFIX.getPrefix() + genesisBlock.getHash(), genesisBlock);
         dbStore.close();
 
         logger.info("创世区块创建成功，Hash：{}.", genesisBlock.getHash());
@@ -99,16 +100,16 @@ public class PofRunner {
     private void genPropertiesFile(CmdArgsParser parser) throws IOException
     {
         Properties properties = new Properties();
-        properties.setProperty("server.address", parser.getOption("api.addr", "127.0.0.1"));
+        properties.setProperty("server.address", parser.getOption("api.addr", "192.168.110.134"));
         properties.setProperty("server.port", parser.getOption("api.port", "8001"));
         properties.setProperty("pof.repo", repo);
 //		默认可挖矿
         properties.setProperty("pof.enable-mining", parser.getOption("enable-mining", "true"));
-        properties.setProperty("p2p.address", parser.getOption("p2p.addr", "127.0.0.1"));
+        properties.setProperty("p2p.address", parser.getOption("p2p.addr", "192.168.110.134"));
         properties.setProperty("p2p.port", parser.getOption("p2p.port", "2345"));
 
         // load common properties
-        properties.setProperty("genesis.address", parser.getOption("genesis.address", "127.0.0.1"));
+        properties.setProperty("genesis.address", parser.getOption("genesis.address", "192.168.110.134"));
         properties.setProperty("genesis.port", parser.getOption("genesis.port", "2345"));
 
         // disable tio logs

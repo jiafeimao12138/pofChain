@@ -114,7 +114,7 @@ public class ProofOfFuzzing {
         Random random = new Random();
         long nonce = random.nextInt();
         long timestamp = System.currentTimeMillis();
-        long height = preBlock.getBlockHeader().getHeight() + 1;
+        int height = preBlock.getBlockHeader().getHeight() + 1;
 
         Block newBlock = new Block();
         BlockHeader blockHeader = new BlockHeader();

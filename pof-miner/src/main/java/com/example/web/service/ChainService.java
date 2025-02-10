@@ -2,6 +2,8 @@ package com.example.web.service;
 
 import com.example.base.entities.block.Block;
 
+import java.util.List;
+
 public interface ChainService {
     void syncBlockChain(long height);
     Block getGenesisBlock();
@@ -9,4 +11,5 @@ public interface ChainService {
     Block getBlockByHash(String hash);
     Block getLocalLatestBlock();
     long getMainChainHeight();
+    List<Integer> getLocalBlocksHeight();
 }

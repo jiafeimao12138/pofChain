@@ -19,9 +19,9 @@ public class Reward {
 
     private final Map<REWARDTYPE, Integer> RewardHashmap = new HashMap<>();
 
-    private REWARDTYPE type;
-    public Reward(REWARDTYPE type) {
-        this.type = type;
+
+    public Reward() {
+
     }
 
     public void setRewardValue(REWARDTYPE rewardType, int reward) {

@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("supplier")
@@ -61,4 +64,12 @@ public class SupplierController {
 
     }
 
+    @RequestMapping("testvue")
+    public List<Integer> getIcons() {
+        ArrayList<Integer> arrayList = new ArrayList<>();
+        for (int i = 100; i >= 0; i--) {
+            arrayList.add(i);
+        }
+        return arrayList;
+    }
 }
