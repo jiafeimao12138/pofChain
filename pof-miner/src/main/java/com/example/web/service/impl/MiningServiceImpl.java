@@ -83,6 +83,10 @@ public class MiningServiceImpl implements MiningService {
     private String recordFile;
     @Value("${wallet.address}")
     private String addressFilePath;
+    @Value("${afl.testcase}")
+    private String testcasefile;
+    @Value("${afl.pathfile}")
+    private String testpathfile;
 
     Path path = null;
     //TODO: 每挖出x个区块更改一次head，类比bitcoin
@@ -103,6 +107,7 @@ public class MiningServiceImpl implements MiningService {
 //            logger.info("删除AFL文件错误");
 //            return;
 //        }
+        Path signalPath = Paths.get("/home/wj/dockerAFLdemo/pofChain/start_java_signal.txt");
         new Thread(() -> {
             logger.info("开始监控窗口文件");
             //@TODO: 动态调整难度
@@ -115,7 +120,25 @@ public class MiningServiceImpl implements MiningService {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            windowFilesWatcher(head, end);
+            // 轮询
+            while (true) {
+                try {
+                    // 轮询检查信号文件
+                    if (Files.exists(signalPath) && new String(Files.readAllBytes(signalPath)).trim().equals("start_java")) {
+                        System.out.println("收到信号，开始计算hash！");
+                        // 执行计算hash的逻辑
+                        doMiningthing(Paths.get(testcasefile), Paths.get(testpathfile), head, end);
+                        // 执行完毕后，通知 Enclave 继续
+                        Files.write(signalPath, "resume".getBytes());
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (WindowFileException e) {
+                    throw new RuntimeException(e);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }).start();
         new Thread(() -> {
             logger.info("开始进行Fuzzing");
@@ -157,6 +180,13 @@ public class MiningServiceImpl implements MiningService {
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * 复制窗口文件到
+     */
+    public void copyWindowFile() {
+
     }
 
     public void windowFilesWatcher(BigInteger head, BigInteger end) {
@@ -285,6 +315,9 @@ public class MiningServiceImpl implements MiningService {
         String content = "," + hitCount + "," + fileNum + "," + newHashInteger + "\n";
 //        Files.write(this.path, content.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         triples.clear();
+        // 清空文件内容
+        Files.newBufferedWriter(testcaseFile).close();
+        Files.newBufferedWriter(pathFile).close();
     }
 
     public Block computeWindowHash(Block preBlock, List<Transaction> transactionList, List<Payload> triples){

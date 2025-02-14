@@ -105,8 +105,6 @@ void authenticationHash(unsigned char hash_output[33]) {
    for(int i=0; i<sizeof(hash1); i++){
    printf("%02x", hash1[i]);
    }
-
-    
 }
 
 

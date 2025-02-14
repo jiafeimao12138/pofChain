@@ -31,7 +31,7 @@ int AFLTest(char *str)
          printf("it is good!\n"); 
      }
      for (int i=0; i<len; i++){
-       
+        sleep(1);       
        
      }
     return 0;

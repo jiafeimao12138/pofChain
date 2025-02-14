@@ -3343,8 +3343,8 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
     fn = alloc_printf("%s/queue/id_%06u", out_dir, queued_paths);
 
 #endif /* ^!SIMPLE_FILES */
-    printf("=================crash_mode=%d\n=============", crash_mode);
-    printf("=================fault=%d\n=============", fault);
+    // printf("=================crash_mode=%d\n=============", crash_mode);
+    // printf("=================fault=%d\n=============", fault);
     add_to_queue(fn, len, 0);
 
 //   hnb == 2表明发现了新路径
@@ -3372,8 +3372,8 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
 
   }
 
-  printf("=================crash_mode=%d\n=============", crash_mode);
-  printf("=================fault=%d\n=============", fault);
+  // printf("=================crash_mode=%d\n=============", crash_mode);
+  // printf("=================fault=%d\n=============", fault);
 
   switch (fault) {
 
@@ -4197,20 +4197,22 @@ static void show_stats(void) {
   u64 min_wo_finds = (cur_ms - last_path_time) / 1000 / 60;
 
     /* First queue cycle: don't stop now! */
-    // if (queue_cycle == 1 || min_wo_finds < 15) strcpy(tmp, cMGN); else
+    if (queue_cycle == 1 || min_wo_finds < 15) strcpy(tmp, cMGN); else
     // if (queue_cycle == 1) strcpy(tmp, cMGN); else
     // /* Subsequent cycles, but we're still making finds. */
-    // if (cycles_wo_finds < 25 || min_wo_finds < 30) strcpy(tmp, cYEL); else
+    if (cycles_wo_finds < 25 || min_wo_finds < 30) strcpy(tmp, cYEL); else
 
     /* No finds for a long time and no test cases to try. */
-    if (queue_cycle > 6){
-      //  strcpy(tmp, cLGN);
-       // 达到条件，自动停止AFL
-       int pid = getpid();
-       kill(pid, SIGINT);
-    }
+    // if (queue_cycle > 60){
+    //   //  strcpy(tmp, cLGN);
+    //    // 达到条件，自动停止AFL
+    //    int pid = getpid();
+    //    kill(pid, SIGINT);
+    // }
+    if (cycles_wo_finds > 100 && !pending_not_fuzzed && min_wo_finds > 120)
+      strcpy(tmp, cLGN);
     /* Default: cautiously OK to stop? */
-    // else strcpy(tmp, cLBL);
+    else strcpy(tmp, cLBL);
 
   // AFL是否终止
 
@@ -4282,18 +4284,19 @@ static void show_stats(void) {
     u64 min_wo_finds = (cur_ms - last_path_time) / 1000 / 60;
 
     /* First queue cycle: don't stop now! */
-    // if (queue_cycle == 1 || min_wo_finds < 15) strcpy(tmp, cMGN); else
-    if (queue_cycle == 1) strcpy(tmp, cMGN); else
+    if (queue_cycle == 1 || min_wo_finds < 15) strcpy(tmp, cMGN); else
     // /* Subsequent cycles, but we're still making finds. */
-    // if (cycles_wo_finds < 25 || min_wo_finds < 30) strcpy(tmp, cYEL); else
+    if (cycles_wo_finds < 25 || min_wo_finds < 30) strcpy(tmp, cYEL); else
 
     /* No finds for a long time and no test cases to try. */
-    if (queue_cycle > 2){
-      //  strcpy(tmp, cLGN);
-       // 达到条件，自动停止AFL
-       int pid = getpid();
-       kill(pid, SIGKILL);
-    }
+    // if (queue_cycle > 2){
+    //   //  strcpy(tmp, cLGN);
+    //    // 达到条件，自动停止AFL
+    //    int pid = getpid();
+    //    kill(pid, SIGKILL);
+    // }
+    if (cycles_wo_finds > 100 && !pending_not_fuzzed && min_wo_finds > 120)
+      strcpy(tmp, cLGN);
     /* Default: cautiously OK to stop? */
     else strcpy(tmp, cLBL);
 
@@ -7187,7 +7190,7 @@ static void handle_timeout(int sig) {
     // printf("Caught signal %d\n", sig);
    
 //        printf("\nhandle_timeout: pid=%d, cnt=%d\n", getpid(), ++timeout_handle_cnt);
-//        printf("child_pid=%d\n", child_pid);
+       printf("child_pid=%d\n", child_pid);
         char *path_source = "testfile1";
         char *case_source = "testcase_file";
 
@@ -7198,9 +7201,8 @@ static void handle_timeout(int sig) {
           kill(child_pid, SIGSTOP);
           sprintf(case_dest, "../fuzzingfiles/windows/window_testcases/testcase_%d", testfile_id);
           sprintf(path_dest, "../fuzzingfiles/windows/window_paths/testfile_%d", testfile_id);
-//          printf("==========================================");
           // 处理这个窗口的path和case
-          printf("testfile_id=%d\n", testfile_id);
+          // printf("testfile_id=%d\n", testfile_id);
 
           // 把上个窗口的path和case复制一下，也就是说把此时的testfile1复制testfile_xxx中)，用来给区块链使用
 
@@ -7248,14 +7250,14 @@ static void handle_timeout(int sig) {
          fclose(new_case_file);
          fclose(new_path_file);
         }
-        printf("this window end, num=%d\n", testfile_id);
+        // printf("this window end, num=%d\n", testfile_id);
 
 
 //     重新设置定时器
        timer.it_value.tv_sec = 1;
        timer.it_value.tv_usec = 0;
        setitimer(ITIMER_REAL, &timer, NULL);
-       printf("new window start\n");
+      //  printf("new window start\n");
   }
   
 

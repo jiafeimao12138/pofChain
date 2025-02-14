@@ -56,6 +56,8 @@ enclave {
         public int ecall_return_res(int a, int b);
        
         public void authenticationHash([in,out]unsigned char* hashoutput);
+
+        public void start_fuzzing_timer();
     };
 
     /* 
@@ -65,6 +67,9 @@ enclave {
      */
     untrusted {
         void ocall_print_string([in, string] const char *str);
+
+        void ocall_get_time([out] uint64_t* time);
+        int ocall_check_afl();  // 让外部代码检查 AFL
     };
     
 
