@@ -14,8 +14,19 @@ RUN apt-get update && apt-get install -y \
     sudo \
     vim \
     iputils-ping \
-    locales
+    locales \
+    cmake \
+    libssl-dev \
+    python3 \
+    python3-pip \
+    gdb \
+    git
 
+# 下载并安装 Intel SGX SDK（适用于 Simulation Mode）
+RUN wget https://download.01.org/intel-sgx/latest/linux-latest/bin/sgx_linux_x64_sdk_latest.bin && \
+    chmod +x sgx_linux_x64_sdk_latest.bin && \
+    echo -e "no\n/opt/intel" | ./sgx_linux_x64_sdk_latest.bin && \
+    rm -f sgx_linux_x64_sdk_latest.bin
 
 # 设置 JAVA_HOME 环境变量
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64 
@@ -23,13 +34,21 @@ ENV PATH $JAVA_HOME/bin:$PATH
 ENV LANG=zh_CN.UTF-8 \
     LANGUAGE=zh_CN:zh \
     LC_ALL=zh_CN.UTF-8
+    
+# 设置 SGX SDK 目录
+ENV SGX_SDK=/opt/intel/sgx-sdk
+ENV PATH=$PATH:$SGX_SDK/bin
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$SGX_SDK/lib64
+
+# 启用 SGX SDK 环境
+RUN echo "source $SGX_SDK/environment" >> ~/.bashrc
 
 # 设置工作目录
 WORKDIR /app
 
 
 # 复制你的目标应用程序到容器中
-COPY pofChain ./pofChain
+COPY . ./pofChain
 COPY core_pattern /proc/sys/kernel/core_pattern
 
 RUN locale-gen zh_CN.UTF-8
