@@ -4,7 +4,7 @@ import com.example.base.entities.transaction.Transaction;
 
 public interface TransactionService {
     // 创建新coinbase交易
-    Transaction createCoinbaseTransaction(String address, int height, int blockReward, int fee);
+    Transaction createCoinbaseTransaction(String address, long height, int blockReward, int fee);
     // 创建新普通交易
     Transaction createCommonTransaction(String fromAddress, String toAddress, int amount, int fee) throws Exception;
     // 校验交易

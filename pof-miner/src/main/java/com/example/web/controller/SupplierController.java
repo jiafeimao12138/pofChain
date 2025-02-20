@@ -59,11 +59,6 @@ public class SupplierController {
         reward.setRewardValue(Reward.REWARDTYPE.NPATH_QUOTA, newPathNum);
     }
 
-    @RequestMapping("sendReward")
-    public void sendReward() {
-
-    }
-
     @RequestMapping("testvue")
     public List<Integer> getIcons() {
         ArrayList<Integer> arrayList = new ArrayList<>();

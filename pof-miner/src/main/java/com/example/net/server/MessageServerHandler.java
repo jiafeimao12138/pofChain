@@ -148,6 +148,7 @@ public class MessageServerHandler {
     // supplier处理接收到的新节点, 如果成功添加新区块，则发布新路径贡献排名
     public synchronized MessagePacket receiveNewBlock_supplier(byte[] msgBody) throws Exception {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
+        logger.info("supplier接收到的newblock: {}", newBlock.toString());
         // 先检查该区块是否本地已存在
         if (chainService.getBlockByHash(newBlock.getHash()) != null) {
             logger.info("该高度已有区块");

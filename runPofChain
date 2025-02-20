@@ -1,0 +1,14 @@
+#!/bin/bash 
+#set -x
+
+repo=""
+for arg in `echo $*|awk '{print $0}'`
+do 
+	if [[ $arg == -repo* ]];
+	then
+		repo=`echo $arg|awk -F '=' '{print $2}'`
+	fi
+done
+
+
+java -jar pof-miner/target/pof-miner-0.0.1-SNAPSHOT.jar --spring.config.location=file:$repo/node.properties $*

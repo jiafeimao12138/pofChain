@@ -2,7 +2,11 @@ package com.example.base.entities.block;
 
 import com.example.base.entities.transaction.Transaction;
 import com.example.base.crypto.CryptoUtils;
+import com.example.base.utils.ByteUtils;
+import com.example.base.utils.SerializeUtils;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
+import org.bitcoinj.base.Sha256Hash;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -32,16 +36,13 @@ public class Block implements Serializable {
         this.transactions = transactions;
     }
 
+    @JsonIgnore
     public String getHash() {
-        return GetHash();
+        return ByteUtils.bytesToHex(GetHash());
     }
 
-    private String GetHash() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(this.blockHeader.toString());
-        sb.append(this.transactions.toString());
-        String sha256 = CryptoUtils.SHA256(sb.toString());
-        return sha256;
+    private byte[] GetHash() {
+        return Sha256Hash.hashTwice(SerializeUtils.serialize(this));
     }
 
     @Override
@@ -55,5 +56,13 @@ public class Block implements Serializable {
     @Override
     public int hashCode() {
         return Objects.hash(blockHeader, transactions);
+    }
+
+    @Override
+    public String toString() {
+        return "Block{" +
+                "blockHeader=" + blockHeader.toString() +
+                ", transactions=" + transactions.toString() +
+                '}';
     }
 }

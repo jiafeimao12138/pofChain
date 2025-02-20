@@ -33,7 +33,7 @@ public class TransactionServiceImpl implements TransactionService {
      * @return
      */
     @Override
-    public Transaction createCoinbaseTransaction(String address, int height, int blockReward, int fee) {
+    public Transaction createCoinbaseTransaction(String address, long height, int blockReward, int fee) {
         return Transaction.newCoinbaseTX(address, height, blockReward, fee);
     }
 

@@ -87,6 +87,8 @@ public class MiningServiceImpl implements MiningService {
     private String testcasefile;
     @Value("${afl.pathfile}")
     private String testpathfile;
+    @Value("${enclave.path}")
+    private String enclavePath;
 
     Path path = null;
     //TODO: 每挖出x个区块更改一次head，类比bitcoin
@@ -102,44 +104,18 @@ public class MiningServiceImpl implements MiningService {
 
     @Override
     public void startMining() {
+
         path = Paths.get(output);
 //        if (!deleteAFLFiles()) {
 //            logger.info("删除AFL文件错误");
 //            return;
 //        }
         Path signalPath = Paths.get("/home/wj/dockerAFLdemo/pofChain/start_java_signal.txt");
-        new Thread(() -> {
-            logger.info("开始监控窗口文件");
-            //@TODO: 动态调整难度
-            List<BigInteger> interval = generateRandomHashHead(5);
-            BigInteger head = interval.get(0);
-            BigInteger end = interval.get(1);
-            try {
-                String content = "动态区间：[" + head.toString() + "," + end.toString() + "]\n";
-                Files.write(path, content.getBytes());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            // 轮询
-            while (true) {
-                try {
-                    // 轮询检查信号文件
-                    if (Files.exists(signalPath) && new String(Files.readAllBytes(signalPath)).trim().equals("start_java")) {
-                        System.out.println("收到信号，开始计算hash！");
-                        // 执行计算hash的逻辑
-                        doMiningthing(Paths.get(testcasefile), Paths.get(testpathfile), head, end);
-                        // 执行完毕后，通知 Enclave 继续
-                        Files.write(signalPath, "resume".getBytes());
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (WindowFileException e) {
-                    throw new RuntimeException(e);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }).start();
+        try {
+            Files.write(signalPath, new byte[0], StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         new Thread(() -> {
             logger.info("开始进行Fuzzing");
             try {
@@ -160,6 +136,65 @@ public class MiningServiceImpl implements MiningService {
                 e.printStackTrace();
             }
         }).start();
+        new Thread(() -> {
+            int exec_time = 0;
+            logger.info("开始监控窗口文件");
+            //@TODO: 动态调整难度
+            List<BigInteger> interval = generateRandomHashHead(5);
+            BigInteger head = interval.get(0);
+            BigInteger end = interval.get(1);
+            try {
+                String content = "动态区间：[" + head.toString() + "," + end.toString() + "]\n";
+                Files.write(path, content.getBytes());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            // 轮询
+            while (true) {
+                try {
+                    // 轮询检查信号文件
+                    if (Files.exists(signalPath) && new String(Files.readAllBytes(signalPath)).trim().equals("start_java")) {
+//                        logger.info("收到信号，开始计算hash:{}", exec_time);
+                        // 执行计算hash的逻辑
+                        doMiningthing(Paths.get(testcasefile), Paths.get(testpathfile), head, end);
+                        // 执行完毕后，通知 Enclave 继续
+                        Files.write(signalPath, "resume".getBytes());
+//                        logger.info("resume:{}", exec_time);
+                        exec_time++;
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (WindowFileException e) {
+                    throw new RuntimeException(e);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
+        new Thread(() -> {
+            try {
+                logger.info("开始监控afl");
+                // 创建 ProcessBuilder 实例
+                ProcessBuilder processBuilder = new ProcessBuilder("./app");
+                // 设置执行路径文件夹
+                processBuilder.directory(new java.io.File(enclavePath));
+                processBuilder.redirectErrorStream(true); // 合并标准输出和错误输出
+                // 启动进程
+                Process process = processBuilder.start();
+                // 读取输出
+//                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+//                    String line;
+//                    while ((line = reader.readLine()) != null) {
+//                        System.out.println(line);
+//                    }
+//                }
+                // 等待进程结束并获取退出状态
+                process.waitFor();
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+
     }
 
     public void executeCommand(String targetProgram) {
@@ -182,13 +217,8 @@ public class MiningServiceImpl implements MiningService {
         }
     }
 
-    /**
-     * 复制窗口文件到
-     */
-    public void copyWindowFile() {
 
-    }
-
+    @Deprecated
     public void windowFilesWatcher(BigInteger head, BigInteger end) {
         // 设置需要监控的目录路径
         Path testcases_dir = Paths.get(windowFiles + "/window_testcases");
@@ -268,6 +298,14 @@ public class MiningServiceImpl implements MiningService {
                               Path pathFile,
                               BigInteger head,
                               BigInteger end) throws WindowFileException, IOException, InterruptedException {
+        // 如果文件为空
+        if (!Files.exists(testcaseFile) || !Files.exists(pathFile)) {
+            logger.info("testcaseFile或pathFile不存在");
+            return;
+        } else if (Files.size(testcaseFile) == 0 || Files.size(pathFile) == 0) {
+            logger.info("testcaseFile或pathFile为空");
+            return;
+        }
         triples = WindowFileUtils.windowFilesToTriple(
                 testcaseFile.toAbsolutePath().toString(),
                 pathFile.toAbsolutePath().toString(),
@@ -275,19 +313,19 @@ public class MiningServiceImpl implements MiningService {
                 );
         // 向中间值添加本轮挖矿的path信息，等到新区块成功挖出后再置空
         payloads.addPayloads(triples);
-        if(!extractTrailingNumber(testcaseFile.toString()).equals(extractTrailingNumber(pathFile.toString()))) {
-            logger.error("错误！！！读取窗口文件错误！！！,{},{}", testcaseFile, pathFile);
-        }
-        int fileNum = extractTrailingNumber(testcaseFile.toString());
-        logger.info("本次处理文件num={}", fileNum);
+//        if(!extractTrailingNumber(testcaseFile.toString()).equals(extractTrailingNumber(pathFile.toString()))) {
+//            logger.error("错误！！！读取窗口文件错误！！！,{},{}", testcaseFile, pathFile);
+//        }
+//        int fileNum = extractTrailingNumber(testcaseFile.toString());
+//        logger.info("本次处理文件num={}", fileNum);
         // 每20个文件清理一次
-        if(fileNum % 20 == 1 && fileNum > 1) {
-            for (int i = 1; i <= 20; i++) {
-                deleteFile(windowFiles + "/window_testcases/testcase_" + (fileNum- 21 + i));
-                deleteFile(windowFiles + "/window_paths/testfile_" + (fileNum- 21 + i));
-            }
-            logger.info("本次清理完毕, 范围是{}到{}", fileNum - 20, fileNum - 1);
-        }
+//        if(fileNum % 20 == 1 && fileNum > 1) {
+//            for (int i = 1; i <= 20; i++) {
+//                deleteFile(windowFiles + "/window_testcases/testcase_" + (fileNum- 21 + i));
+//                deleteFile(windowFiles + "/window_paths/testfile_" + (fileNum- 21 + i));
+//            }
+//            logger.info("本次清理完毕, 范围是{}到{}", fileNum - 20, fileNum - 1);
+//        }
         Block preBlock = chainService.getLocalLatestBlock();
         logger.info("本次计算区块hash的preBlock：高度为{}, Hash为{}", preBlock.getBlockHeader().getHeight(), preBlock.getHash());
 
@@ -295,10 +333,14 @@ public class MiningServiceImpl implements MiningService {
         List<Transaction> transactions = chooseTransactions();
         // 在交易列表最前端加上coinbase交易
         Transaction coinbaseTX = createCoinbaseTX(transactions, 0, preBlock.getBlockHeader().getHeight());
-        transactions.set(0, coinbaseTX);
+        if (transactions.size() == 0) {
+            transactions.add(coinbaseTX);
+        } else {
+            transactions.set(0, coinbaseTX);
+        }
         Block newBlock = computeWindowHash(preBlock, transactions, triples);
         String newHash = newBlock.getHash();
-
+        logger.info("比较一下：newHash={}, newBlock.getHash={}", newHash, newBlock.getHash());
         logger.info("新区块中的payload长度为：{}", newBlock.getBlockHeader().getTriples().size());
         // 当命中区间
         if(isInInterval(newHash, head, end)) {
@@ -312,7 +354,7 @@ public class MiningServiceImpl implements MiningService {
             Files.write(this.path, "not hit".getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         }
         BigInteger newHashInteger = new BigInteger(newHash, 16);
-        String content = "," + hitCount + "," + fileNum + "," + newHashInteger + "\n";
+//        String content = "," + hitCount + "," + fileNum + "," + newHashInteger + "\n";
 //        Files.write(this.path, content.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         triples.clear();
         // 清空文件内容
@@ -324,7 +366,7 @@ public class MiningServiceImpl implements MiningService {
         Random random = new Random();
         long nonce = random.nextLong();
         long timestamp = System.currentTimeMillis();
-        int height = preBlock.getBlockHeader().getHeight() + 1;
+        long height = preBlock.getBlockHeader().getHeight() + 1;
 
         Block newBlock = new Block();
         BlockHeader blockHeader = new BlockHeader();
@@ -338,8 +380,6 @@ public class MiningServiceImpl implements MiningService {
 
         newBlock.setBlockHeader(blockHeader);
         newBlock.setTransactions(transactionList);
-        String sha256 = newBlock.getHash();
-        System.out.println("SHA256: " + sha256);
         return newBlock;
     }
 
@@ -360,7 +400,8 @@ public class MiningServiceImpl implements MiningService {
                 newBlock.getBlockHeader().getHeight(), newHash,newBlock.getBlockHeader().getHashPreBlock());
         // 广播新区块
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
-        logger.info("广播新Block,hash={}", newHash);
+
+        logger.info("广播新Block:{}", newBlock.toString());
         endWindow = System.currentTimeMillis();
         logger.info("endWindow: {}", endWindow);
         long time = endWindow - lastWindowEnd;
@@ -386,8 +427,6 @@ public class MiningServiceImpl implements MiningService {
                     logger.info("提交之前payloads：{}", payloads.getPayloads().size());
                     p2pClient.sendToNode(channelContext, messagePacket);
                     payloads.setNull();
-                    logger.info("提交之后payloads：{}", payloads.getPayloads().size());
-                    Thread.sleep(2000);
                     return true;
                 }
             }
@@ -430,7 +469,7 @@ public class MiningServiceImpl implements MiningService {
         return transactions;
     }
 
-    private Transaction createCoinbaseTX(List<Transaction> transactions, int index, int height) {
+    private Transaction createCoinbaseTX(List<Transaction> transactions, int index, long height) {
         // 计算所有的fee
         int feeTotal = transactions.stream().mapToInt(Transaction::getFee).sum();
         // 获取收款地址

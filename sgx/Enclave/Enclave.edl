@@ -52,6 +52,7 @@ enclave {
 
     trusted {
         public void start_fuzzing_timer();
+        public void ecall_process_data();
     };
 
     /* 
@@ -66,13 +67,16 @@ enclave {
         void ocall_print_string([in, string] const char *str);
         void ocall_get_time([out] uint64_t* time);
         int ocall_get_target_pid(int afl_pid, [in, out] int* target_pid);
-        void ocall_pause_fuzzing(int pid);
-        void ocall_resume_fuzzing(int pid);
+        void ocall_pause_fuzzing(int target_pid, int forkserver_pid);
+        void ocall_resume_fuzzing(int pid, int forkserver_pid);
         int ocall_get_fuzz_worker_pid(int target_pid, [in, out] int* fuzz_worker_pid);
         int ocall_check_afl();  // 让外部代码检查 AFL
         int ocall_get_afl_pid([out] int* pid);
         void ocall_notify_java();
         int ocall_check_java([in, out] int *isEqual);
+        void ocall_write_shm();
+        void create_shared_memory([in, size=128] char** shm_ptr);
+
     };
 
 };

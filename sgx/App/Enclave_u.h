@@ -53,11 +53,11 @@ int SGX_UBRIDGE(SGX_NOCONVENTION, ocall_get_target_pid, (int afl_pid, int* targe
 #endif
 #ifndef OCALL_PAUSE_FUZZING_DEFINED__
 #define OCALL_PAUSE_FUZZING_DEFINED__
-void SGX_UBRIDGE(SGX_NOCONVENTION, ocall_pause_fuzzing, (int pid));
+void SGX_UBRIDGE(SGX_NOCONVENTION, ocall_pause_fuzzing, (int target_pid, int forkserver_pid));
 #endif
 #ifndef OCALL_RESUME_FUZZING_DEFINED__
 #define OCALL_RESUME_FUZZING_DEFINED__
-void SGX_UBRIDGE(SGX_NOCONVENTION, ocall_resume_fuzzing, (int pid));
+void SGX_UBRIDGE(SGX_NOCONVENTION, ocall_resume_fuzzing, (int pid, int forkserver_pid));
 #endif
 #ifndef OCALL_GET_FUZZ_WORKER_PID_DEFINED__
 #define OCALL_GET_FUZZ_WORKER_PID_DEFINED__
@@ -78,6 +78,14 @@ void SGX_UBRIDGE(SGX_NOCONVENTION, ocall_notify_java, (void));
 #ifndef OCALL_CHECK_JAVA_DEFINED__
 #define OCALL_CHECK_JAVA_DEFINED__
 int SGX_UBRIDGE(SGX_NOCONVENTION, ocall_check_java, (int* isEqual));
+#endif
+#ifndef OCALL_WRITE_SHM_DEFINED__
+#define OCALL_WRITE_SHM_DEFINED__
+void SGX_UBRIDGE(SGX_NOCONVENTION, ocall_write_shm, (void));
+#endif
+#ifndef CREATE_SHARED_MEMORY_DEFINED__
+#define CREATE_SHARED_MEMORY_DEFINED__
+void SGX_UBRIDGE(SGX_NOCONVENTION, create_shared_memory, (char** shm_ptr));
 #endif
 #ifndef OCALL_POINTER_USER_CHECK_DEFINED__
 #define OCALL_POINTER_USER_CHECK_DEFINED__
@@ -121,6 +129,7 @@ int SGX_UBRIDGE(SGX_CDECL, sgx_thread_set_multiple_untrusted_events_ocall, (cons
 #endif
 
 sgx_status_t start_fuzzing_timer(sgx_enclave_id_t eid);
+sgx_status_t ecall_process_data(sgx_enclave_id_t eid);
 sgx_status_t ecall_type_char(sgx_enclave_id_t eid, char val);
 sgx_status_t ecall_type_int(sgx_enclave_id_t eid, int val);
 sgx_status_t ecall_type_float(sgx_enclave_id_t eid, float val);

@@ -98,7 +98,7 @@ public class WindowFileUtils {
                 String Hexpath = pathsplits[i];
                 int index = 0;
                 ArrayList<Integer> path = new ArrayList<>();
-                while (index < Hexpath.length()) {
+                while (index <= Hexpath.length() - 4) {
                     String hex = Hexpath.substring(index, index + 4);
                     String newHex = hex.substring(2,4) + hex.substring(0,2);
 //                    System.out.print(newHex + " ");

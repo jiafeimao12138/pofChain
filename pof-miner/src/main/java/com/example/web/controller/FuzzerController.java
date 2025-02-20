@@ -3,15 +3,18 @@ package com.example.web.controller;
 import com.example.base.entities.block.Block;
 import com.example.base.entities.Node;
 import com.example.base.entities.NodeType;
+import com.example.base.vo.JsonVo;
 import com.example.web.service.ChainService;
 import com.example.web.service.MiningService;
 import com.example.web.service.ProcessService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -50,13 +53,13 @@ public class FuzzerController {
         try {
             List<String> processIds = processService.findProcessIds("afl-fuzz");
             logger.info("suspendFuzzing processIds: {}", processIds);
-            if (processIds.size() > 1) {
-                logger.error("fuzzing进程数大于1");
-            }else {
-                fuzzingprocessId = processIds.get(0);
-                processService.suspendProcess(fuzzingprocessId);
-                logger.info("已挂起，进程号{}", fuzzingprocessId);
-            }
+            if (CollectionUtils.isEmpty(processIds))
+                return;
+            Collections.sort(processIds, (s1, s2) -> Integer.compare(Integer.parseInt(s2), Integer.parseInt(s1)));
+            fuzzingprocessId = processIds.get(0);
+            processService.suspendProcess(fuzzingprocessId);
+            logger.info("已挂起，进程号{}", fuzzingprocessId);
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -68,14 +71,14 @@ public class FuzzerController {
         node.setType(NodeType.OBSERVER);
         try {
             List<String> processIds = processService.findProcessIds("afl-fuzz");
-            logger.info("suspendFuzzing processIds: {}", processIds);
-            if (processIds.size() > 1) {
-                logger.error("fuzzing进程数大于1");
-            }else {
-                fuzzingprocessId = processIds.get(0);
-                processService.killProcess(fuzzingprocessId);
-                logger.info("已杀死Fuzzing进程，进程号{}", fuzzingprocessId);
-            }
+            logger.info("stopFuzzing processIds: {}", processIds);
+            if (CollectionUtils.isEmpty(processIds))
+                return;
+            Collections.sort(processIds, (s1, s2) -> Integer.compare(Integer.parseInt(s2), Integer.parseInt(s1)));
+            fuzzingprocessId = processIds.get(0);
+            processService.killProcess(fuzzingprocessId);
+            logger.info("已杀死Fuzzing进程，进程号{}", fuzzingprocessId);
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -85,6 +88,11 @@ public class FuzzerController {
     @RequestMapping("resumeFuzzing")
     public void resumeFuzzing() {
         try {
+            List<String> processIds = processService.findProcessIds("afl-fuzz");
+            logger.info("resumeFuzzing processIds: {}", processIds);
+            if (CollectionUtils.isEmpty(processIds))
+                return;
+            Collections.sort(processIds, (s1, s2) -> Integer.compare(Integer.parseInt(s2), Integer.parseInt(s1)));
             processService.resumeProcess(fuzzingprocessId);
             logger.info("已恢复Fuzzing，进程号{}",fuzzingprocessId);
         } catch (Exception e) {
@@ -92,22 +100,6 @@ public class FuzzerController {
         }
     }
 
-    @RequestMapping("getChainHeight")
-    public long getChainHeight() {
-        long mainChainHeight = chainService.getMainChainHeight();
-        return mainChainHeight;
-    }
-
-    @RequestMapping("getLocalChainLatestBlock")
-    public String getLocalChainLatestBlock() {
-        Block localLatestBlock = chainService.getLocalLatestBlock();
-        return "localLatestBlock: hash=" + localLatestBlock.getHash() + ",height=" + localLatestBlock.getBlockHeader().getHeight();
-    }
-
-    @RequestMapping("syncBlockChain")
-    public void syncBlockChain() {
-        chainService.syncBlockChain(1);
-    }
 
     @RequestMapping("test")
     public void test() throws InterruptedException {

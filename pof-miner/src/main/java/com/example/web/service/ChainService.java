@@ -11,5 +11,5 @@ public interface ChainService {
     Block getBlockByHash(String hash);
     Block getLocalLatestBlock();
     long getMainChainHeight();
-    List<Integer> getLocalBlocksHeight();
+    List<Long> getLocalBlocksHeight();
 }

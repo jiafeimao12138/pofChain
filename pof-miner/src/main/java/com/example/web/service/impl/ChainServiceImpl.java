@@ -103,15 +103,15 @@ public class ChainServiceImpl implements ChainService {
      * @return
      */
     @Override
-    public List<Integer> getLocalBlocksHeight() {
+    public List<Long> getLocalBlocksHeight() {
         readLock.lock();
-        ArrayList<Integer> heights = new ArrayList<>();
+        ArrayList<Long> heights = new ArrayList<>();
         Optional<Object> o = rocksDBStore.get(BlockPrefix.HEIGHT.getPrefix());
-        int height = 0;
+        long height = 0;
         if (o.isPresent()) {
-            height = (int) o.get();
+            height = (long) o.get();
         }
-        for (int i = height; i >= 0 ; i--) {
+        for (long i = height; i >= 0 ; i--) {
             heights.add(i);
         }
         readLock.unlock();

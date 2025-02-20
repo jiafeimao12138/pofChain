@@ -36,10 +36,14 @@
 #include <assert.h>
 #include <time.h>
 #include <signal.h>
+#include <jni.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 
-# include <unistd.h>
-# include <pwd.h>
-# define MAX_PATH FILENAME_MAX
+#include <unistd.h>
+#include <pwd.h>
+#define MAX_PATH FILENAME_MAX
+#define SHM_SIZE 128
 
 #include "sgx_urts.h"
 #include "App.h"
@@ -47,6 +51,7 @@
 
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
+char *shm_ptr = NULL;
 
 typedef struct _sgx_errlist_t {
     sgx_status_t err;
@@ -194,9 +199,7 @@ int ocall_get_afl_pid(int* pid) {
 
     char buffer[16];
     if (fgets(buffer, sizeof(buffer), pipe) != NULL) {
-        printf("========buffer=%s\n", buffer);
         *pid = atoi(buffer);
-        printf("========pid=%d\n", *pid);
         pclose(pipe);
         return 1;
     } else{
@@ -245,18 +248,24 @@ int ocall_get_fuzz_worker_pid(int target_pid, int* fuzz_worker_pid) {
 }
 
 // 暂停 target_program 进程
-void ocall_pause_fuzzing(int pid) {
-    if (pid > 0) {
-        kill(pid, SIGSTOP);
-        printf("暂停 Fuzzing 进程: %d\n", pid);
+void ocall_pause_fuzzing(int target_pid, int forkserver_pid) {
+    if (target_pid > 0) {
+        kill(target_pid, SIGSTOP);
+//        printf("暂停 Fuzzing 进程: %d\n", target_pid);
+    } else {
+        kill(forkserver_pid, SIGSTOP);
+//        printf("暂停 forkserver 进程: %d\n", forkserver_pid);
     }
 }
 
 // 恢复 target_program 进程
-void ocall_resume_fuzzing(int pid) {
+void ocall_resume_fuzzing(int pid, int forkserver_pid) {
     if (pid > 0) {
         kill(pid, SIGCONT);
         printf("恢复 Fuzzing 进程: %d\n", pid);
+    } else {
+        kill(forkserver_pid, SIGCONT);
+        printf("恢复 forkserver 进程: %d\n", pid);
     }
 }
 
@@ -287,6 +296,23 @@ int ocall_check_afl() {
     return found;
 }
 
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_example_net_conf_EnclaveInterface_callEnclave(JNIEnv *env, jobject obj, jstring input) {
+    const char *nativeInput = env->GetStringUTFChars(input, 0);
+    char output[256] = {0};
+    char* modifiedInput = strdup(nativeInput);
+
+    // 调用 Enclave 里的 ecall 方法
+    sgx_status_t status = ecall_process_data(global_eid);
+    env->ReleaseStringUTFChars(input, nativeInput);
+
+    if (status != SGX_SUCCESS) {
+        return env->NewStringUTF("Enclave Error");
+    }
+    free(input);
+    return env->NewStringUTF(output);
+}
+
 void ocall_notify_java() {
     // 写入信号文件，通知 Java 开始执行
     FILE *file = fopen("/home/wj/dockerAFLdemo/pofChain/start_java_signal.txt", "w");
@@ -298,7 +324,7 @@ void ocall_notify_java() {
 
 int ocall_check_java(int* isEqual) {
     char buffer[16];
-    
+
     while (true) {
         FILE *file = fopen("/home/wj/dockerAFLdemo/pofChain/start_java_signal.txt", "r");
         if (!file) {
@@ -310,7 +336,6 @@ int ocall_check_java(int* isEqual) {
         if (fgets(buffer, sizeof(buffer), file) != NULL) {
             // 去掉换行符
             buffer[strcspn(buffer, "\n")] = 0;
-            printf("buffer=%s\n", buffer);
             // 检查内容是否为 "resume"
             if (strcmp(buffer, "resume") == 0) {
                 printf("equal\n");
@@ -324,14 +349,25 @@ int ocall_check_java(int* isEqual) {
     }
 }
 
+// 创建共享内存
+void create_shared_memory(char **shm_ptr) {
+    int shm_fd = shm_open("/my_shm5", O_CREAT | O_RDWR, 0666);
+    ftruncate(shm_fd, SHM_SIZE);
+    *shm_ptr = (char*)mmap(NULL, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+    memset(*shm_ptr, 0, SHM_SIZE); // 初始化共享内存
+}
 
+// 写入共享内存
+void ocall_write_shm() {
+    const char *start_msg = "start_java";
+    memcpy(shm_ptr, start_msg, strlen(start_msg) + 1);
+}
 
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {
     (void)(argc);
     (void)(argv);
-
 
     /* Initialize the enclave */
     if(initialize_enclave() < 0){
@@ -350,6 +386,14 @@ int SGX_CDECL main(int argc, char *argv[])
     ecall_libc_functions();
     ecall_libcxx_functions();
     ecall_thread_functions();
+
+    // 创建共享内存
+
+//    create_shared_memory(&shm_ptr);
+//    const char *start_msg = "start_javaewewq";
+//    ocall_write_shm(start_msg);
+//    printf("shm_ptr=%s\n", shm_ptr);
+//    ocall_write_shm(start_msg);
 
     start_fuzzing_timer(global_eid);
 

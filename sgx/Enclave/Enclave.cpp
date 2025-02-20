@@ -31,6 +31,7 @@
 
 #include "Enclave.h"
 #include "Enclave_t.h" /* print_string */
+#include "sgx_trts.h"
 #include <stdarg.h>
 #include <stdio.h> /* vsnprintf */
 #include <string.h>
@@ -50,7 +51,13 @@ int printf(const char* fmt, ...)
     return (int)strnlen(buf, BUFSIZ - 1) + 1;
 }
 
+void ecall_process_data() {
+    printf("sgx receive\n");
+}
+
+
 void start_fuzzing_timer() {
+
     uint64_t start_time, current_time;
     int afl_pid = -1;
     int target_pid = -1;
@@ -58,57 +65,52 @@ void start_fuzzing_timer() {
     int isEqual = 0;
 
     printf("开始执行start_fuzzing_timer\n");
-    ocall_get_afl_pid(0, &afl_pid);
-    printf("afl_pid=%d\n", afl_pid);
 
-    // 获取 AFL 进程 ID
-    if (afl_pid <= 0) {
-        printf("未找到 AFL 进程，退出\n");
-        return;
+
+    while(1) {
+       ocall_get_afl_pid(0, &afl_pid);
+       // 获取 AFL 进程 ID
+        if (afl_pid > 0) {
+            break;
+        }
     }
 
     ocall_get_target_pid(0, afl_pid, &target_pid);
     printf("target_pid=%d\n", target_pid);
-    // 获取 `target_program` 进程 ID
-    if (target_pid <= 0) {
-        printf("未找到 forkserver 进程，退出\n");
-        return;
-    }
 
     // 获取当前时间
     ocall_get_time(&start_time);
 
-    uint64_t max_time = 10;
+    // 窗口时间 1s
+    uint64_t max_time = 1;
 
     printf("afl进程：%d\n", afl_pid);
     printf("forkserver进程：%d\n", target_pid);
 
     while (1) {
         ocall_get_time(&current_time);
-        // printf("current-start=%d\n", current_time - start_time);
-        if (current_time - start_time > max_time) {
+
+        if (current_time - start_time >= max_time) {
             printf("时间到，暂停 Fuzzing 进程\n");
+            printf("current=%d\n", current_time);
             
             // 获取 `fuzz_worker` 进程 ID
             ocall_get_fuzz_worker_pid(0, target_pid, &fuzz_worker_pid);
             printf("target program进程：%d\n", fuzz_worker_pid);
-            if (fuzz_worker_pid <= 0) {
-               printf("未找到 target_program 进程，退出\n");
-            } else {
-             ocall_pause_fuzzing(fuzz_worker_pid);  // **暂停 fuzz_worker**
+
+             ocall_pause_fuzzing(fuzz_worker_pid, target_pid);  // 暂停 fuzz_worker
              // 通知java程序计算hash
-             // 写入信号文件，通知 Java 开始执行
              ocall_notify_java();
-             // 检查文件内容
+             // 写入共享内存，通知 Java 开始执行
+//             ocall_write_shm();
+             // 监控共享内存
              ocall_check_java(0, &isEqual);
-             printf("res=%d\n", isEqual);
              if(isEqual) {
                 printf("继续afl\n");
-                ocall_resume_fuzzing(fuzz_worker_pid);
+                ocall_resume_fuzzing(fuzz_worker_pid, target_pid);
              }
              // 等待java程序计算完毕，恢复
-             
-            }
+
             ocall_get_time(&start_time);
             
         }

@@ -39,6 +39,7 @@ typedef union union_foo_t {
 #endif
 
 void start_fuzzing_timer(void);
+void ecall_process_data(void);
 void ecall_type_char(char val);
 void ecall_type_int(int val);
 void ecall_type_float(float val);
@@ -75,13 +76,15 @@ void ecall_consumer(void);
 sgx_status_t SGX_CDECL ocall_print_string(const char* str);
 sgx_status_t SGX_CDECL ocall_get_time(uint64_t* time);
 sgx_status_t SGX_CDECL ocall_get_target_pid(int* retval, int afl_pid, int* target_pid);
-sgx_status_t SGX_CDECL ocall_pause_fuzzing(int pid);
-sgx_status_t SGX_CDECL ocall_resume_fuzzing(int pid);
+sgx_status_t SGX_CDECL ocall_pause_fuzzing(int target_pid, int forkserver_pid);
+sgx_status_t SGX_CDECL ocall_resume_fuzzing(int pid, int forkserver_pid);
 sgx_status_t SGX_CDECL ocall_get_fuzz_worker_pid(int* retval, int target_pid, int* fuzz_worker_pid);
 sgx_status_t SGX_CDECL ocall_check_afl(int* retval);
 sgx_status_t SGX_CDECL ocall_get_afl_pid(int* retval, int* pid);
 sgx_status_t SGX_CDECL ocall_notify_java(void);
 sgx_status_t SGX_CDECL ocall_check_java(int* retval, int* isEqual);
+sgx_status_t SGX_CDECL ocall_write_shm(void);
+sgx_status_t SGX_CDECL create_shared_memory(char** shm_ptr);
 sgx_status_t SGX_CDECL ocall_pointer_user_check(int* val);
 sgx_status_t SGX_CDECL ocall_pointer_in(int* val);
 sgx_status_t SGX_CDECL ocall_pointer_out(int* val);

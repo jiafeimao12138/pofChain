@@ -14,6 +14,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 public class PofRunner {
@@ -45,7 +47,7 @@ public class PofRunner {
             case "genesis" :
                 logger.info("创世节点生成中。。。。");
                 if (repo_dir.exists()) {
-                    throw new RuntimeException(String.format("A genesis repo is already initialized in '%s'", repo_dir));
+                    deleteDirectory(repo_dir);
                 }
                 dbStore = new RocksDBStore(repo);
                 block = generateGenesisBlock();
@@ -62,7 +64,7 @@ public class PofRunner {
             case "miner" :
                 logger.info("矿工节点加入中。。。。。");
                 if (repo_dir.exists()) {
-                    throw new RuntimeException(String.format("A miner repo is already initialized in '%s'", repo_dir));
+                    deleteDirectory(repo_dir);
                 }
                 dbStore = new RocksDBStore(repo);
                 generateGenesisBlock();
@@ -71,6 +73,25 @@ public class PofRunner {
                 break;
         }
         return true;
+    }
+
+    // 递归删除目录及其内容
+    public boolean deleteDirectory(File directory) {
+        // 确保目录存在
+        if (directory.exists()) {
+            // 如果是目录，递归删除子文件和子目录
+            if (directory.isDirectory()) {
+                File[] files = directory.listFiles();
+                if (files != null) {
+                    for (File file : files) {
+                        deleteDirectory(file); // 递归删除
+                    }
+                }
+            }
+            // 删除空文件夹或文件
+            return directory.delete();
+        }
+        return false; // 如果目录不存在
     }
 
     public Block generateGenesisBlock() {

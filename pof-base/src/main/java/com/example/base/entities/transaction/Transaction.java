@@ -112,10 +112,10 @@ public class Transaction {
      * @param blockHeight
      * @return
      */
-    public static Transaction newCoinbaseTX(String toAddress, int blockHeight, int blockReward, int fee) {
+    public static Transaction newCoinbaseTX(String toAddress, long blockHeight, int blockReward, int fee) {
         Transaction coinBaseTX = new Transaction();
         // 创建交易输入
-        byte[] coinBaseData = ByteBuffer.allocate(4).putInt(blockHeight).array();
+        byte[] coinBaseData = ByteBuffer.allocate(8).putLong(blockHeight).array();
         TXInput txInput = TXInput.coinbaseInput(coinBaseData);
         coinBaseTX.addInput(txInput);
 

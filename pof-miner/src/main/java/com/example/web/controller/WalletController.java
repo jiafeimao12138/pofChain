@@ -5,7 +5,6 @@ import com.example.base.entities.wallet.Wallet;
 import com.example.base.entities.wallet.WalletUtils;
 import com.example.base.store.DBStore;
 import com.example.base.store.WalletPrefix;
-import com.example.base.utils.ByteUtils;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.NewTransactionEvent;
 import com.example.web.service.TransactionService;

@@ -30,10 +30,6 @@ int AFLTest(char *str)
      {
          printf("it is good!\n"); 
      }
-     for (int i=0; i<len; i++){
-       
-       
-     }
     return 0;
 }
 // void get_time_str_ms(char *time_str, int len)

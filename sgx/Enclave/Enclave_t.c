@@ -151,11 +151,13 @@ typedef struct ms_ocall_get_target_pid_t {
 } ms_ocall_get_target_pid_t;
 
 typedef struct ms_ocall_pause_fuzzing_t {
-	int ms_pid;
+	int ms_target_pid;
+	int ms_forkserver_pid;
 } ms_ocall_pause_fuzzing_t;
 
 typedef struct ms_ocall_resume_fuzzing_t {
 	int ms_pid;
+	int ms_forkserver_pid;
 } ms_ocall_resume_fuzzing_t;
 
 typedef struct ms_ocall_get_fuzz_worker_pid_t {
@@ -177,6 +179,10 @@ typedef struct ms_ocall_check_java_t {
 	int ms_retval;
 	int* ms_isEqual;
 } ms_ocall_check_java_t;
+
+typedef struct ms_create_shared_memory_t {
+	char** ms_shm_ptr;
+} ms_create_shared_memory_t;
 
 typedef struct ms_ocall_pointer_user_check_t {
 	int* ms_val;
@@ -227,6 +233,14 @@ static sgx_status_t SGX_CDECL sgx_start_fuzzing_timer(void* pms)
 	sgx_status_t status = SGX_SUCCESS;
 	if (pms != NULL) return SGX_ERROR_INVALID_PARAMETER;
 	start_fuzzing_timer();
+	return status;
+}
+
+static sgx_status_t SGX_CDECL sgx_ecall_process_data(void* pms)
+{
+	sgx_status_t status = SGX_SUCCESS;
+	if (pms != NULL) return SGX_ERROR_INVALID_PARAMETER;
+	ecall_process_data();
 	return status;
 }
 
@@ -1203,11 +1217,12 @@ static sgx_status_t SGX_CDECL sgx_ecall_consumer(void* pms)
 
 SGX_EXTERNC const struct {
 	size_t nr_ecall;
-	struct {void* ecall_addr; uint8_t is_priv; uint8_t is_switchless;} ecall_table[33];
+	struct {void* ecall_addr; uint8_t is_priv; uint8_t is_switchless;} ecall_table[34];
 } g_ecall_table = {
-	33,
+	34,
 	{
 		{(void*)(uintptr_t)sgx_start_fuzzing_timer, 0, 0},
+		{(void*)(uintptr_t)sgx_ecall_process_data, 0, 0},
 		{(void*)(uintptr_t)sgx_ecall_type_char, 0, 0},
 		{(void*)(uintptr_t)sgx_ecall_type_int, 0, 0},
 		{(void*)(uintptr_t)sgx_ecall_type_float, 0, 0},
@@ -1245,30 +1260,32 @@ SGX_EXTERNC const struct {
 
 SGX_EXTERNC const struct {
 	size_t nr_ocall;
-	uint8_t entry_table[20][33];
+	uint8_t entry_table[22][34];
 } g_dyn_entry_table = {
-	20,
+	22,
 	{
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, },
 	}
 };
 
@@ -1450,7 +1467,7 @@ sgx_status_t SGX_CDECL ocall_get_target_pid(int* retval, int afl_pid, int* targe
 	return status;
 }
 
-sgx_status_t SGX_CDECL ocall_pause_fuzzing(int pid)
+sgx_status_t SGX_CDECL ocall_pause_fuzzing(int target_pid, int forkserver_pid)
 {
 	sgx_status_t status = SGX_SUCCESS;
 
@@ -1468,7 +1485,12 @@ sgx_status_t SGX_CDECL ocall_pause_fuzzing(int pid)
 	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_pause_fuzzing_t));
 	ocalloc_size -= sizeof(ms_ocall_pause_fuzzing_t);
 
-	if (memcpy_verw_s(&ms->ms_pid, sizeof(ms->ms_pid), &pid, sizeof(pid))) {
+	if (memcpy_verw_s(&ms->ms_target_pid, sizeof(ms->ms_target_pid), &target_pid, sizeof(target_pid))) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	if (memcpy_verw_s(&ms->ms_forkserver_pid, sizeof(ms->ms_forkserver_pid), &forkserver_pid, sizeof(forkserver_pid))) {
 		sgx_ocfree();
 		return SGX_ERROR_UNEXPECTED;
 	}
@@ -1481,7 +1503,7 @@ sgx_status_t SGX_CDECL ocall_pause_fuzzing(int pid)
 	return status;
 }
 
-sgx_status_t SGX_CDECL ocall_resume_fuzzing(int pid)
+sgx_status_t SGX_CDECL ocall_resume_fuzzing(int pid, int forkserver_pid)
 {
 	sgx_status_t status = SGX_SUCCESS;
 
@@ -1500,6 +1522,11 @@ sgx_status_t SGX_CDECL ocall_resume_fuzzing(int pid)
 	ocalloc_size -= sizeof(ms_ocall_resume_fuzzing_t);
 
 	if (memcpy_verw_s(&ms->ms_pid, sizeof(ms->ms_pid), &pid, sizeof(pid))) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+
+	if (memcpy_verw_s(&ms->ms_forkserver_pid, sizeof(ms->ms_forkserver_pid), &forkserver_pid, sizeof(forkserver_pid))) {
 		sgx_ocfree();
 		return SGX_ERROR_UNEXPECTED;
 	}
@@ -1748,6 +1775,64 @@ sgx_status_t SGX_CDECL ocall_check_java(int* retval, int* isEqual)
 	return status;
 }
 
+sgx_status_t SGX_CDECL ocall_write_shm(void)
+{
+	sgx_status_t status = SGX_SUCCESS;
+	status = sgx_ocall(10, NULL);
+
+	return status;
+}
+sgx_status_t SGX_CDECL create_shared_memory(char** shm_ptr)
+{
+	sgx_status_t status = SGX_SUCCESS;
+	size_t _len_shm_ptr = 128;
+
+	ms_create_shared_memory_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_create_shared_memory_t);
+	void *__tmp = NULL;
+
+
+	CHECK_ENCLAVE_POINTER(shm_ptr, _len_shm_ptr);
+
+	if (ADD_ASSIGN_OVERFLOW(ocalloc_size, (shm_ptr != NULL) ? _len_shm_ptr : 0))
+		return SGX_ERROR_INVALID_PARAMETER;
+
+	__tmp = sgx_ocalloc(ocalloc_size);
+	if (__tmp == NULL) {
+		sgx_ocfree();
+		return SGX_ERROR_UNEXPECTED;
+	}
+	ms = (ms_create_shared_memory_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_create_shared_memory_t));
+	ocalloc_size -= sizeof(ms_create_shared_memory_t);
+
+	if (shm_ptr != NULL) {
+		if (memcpy_verw_s(&ms->ms_shm_ptr, sizeof(char**), &__tmp, sizeof(char**))) {
+			sgx_ocfree();
+			return SGX_ERROR_UNEXPECTED;
+		}
+		if (_len_shm_ptr % sizeof(*shm_ptr) != 0) {
+			sgx_ocfree();
+			return SGX_ERROR_INVALID_PARAMETER;
+		}
+		if (memcpy_verw_s(__tmp, ocalloc_size, shm_ptr, _len_shm_ptr)) {
+			sgx_ocfree();
+			return SGX_ERROR_UNEXPECTED;
+		}
+		__tmp = (void *)((size_t)__tmp + _len_shm_ptr);
+		ocalloc_size -= _len_shm_ptr;
+	} else {
+		ms->ms_shm_ptr = NULL;
+	}
+
+	status = sgx_ocall(11, ms);
+
+	if (status == SGX_SUCCESS) {
+	}
+	sgx_ocfree();
+	return status;
+}
+
 sgx_status_t SGX_CDECL ocall_pointer_user_check(int* val)
 {
 	sgx_status_t status = SGX_SUCCESS;
@@ -1771,7 +1856,7 @@ sgx_status_t SGX_CDECL ocall_pointer_user_check(int* val)
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	status = sgx_ocall(10, ms);
+	status = sgx_ocall(12, ms);
 
 	if (status == SGX_SUCCESS) {
 	}
@@ -1822,7 +1907,7 @@ sgx_status_t SGX_CDECL ocall_pointer_in(int* val)
 		ms->ms_val = NULL;
 	}
 
-	status = sgx_ocall(11, ms);
+	status = sgx_ocall(13, ms);
 
 	if (status == SGX_SUCCESS) {
 	}
@@ -1872,7 +1957,7 @@ sgx_status_t SGX_CDECL ocall_pointer_out(int* val)
 		ms->ms_val = NULL;
 	}
 
-	status = sgx_ocall(12, ms);
+	status = sgx_ocall(14, ms);
 
 	if (status == SGX_SUCCESS) {
 		if (val) {
@@ -1931,7 +2016,7 @@ sgx_status_t SGX_CDECL ocall_pointer_in_out(int* val)
 		ms->ms_val = NULL;
 	}
 
-	status = sgx_ocall(13, ms);
+	status = sgx_ocall(15, ms);
 
 	if (status == SGX_SUCCESS) {
 		if (val) {
@@ -1948,7 +2033,7 @@ sgx_status_t SGX_CDECL ocall_pointer_in_out(int* val)
 sgx_status_t SGX_CDECL ocall_function_allow(void)
 {
 	sgx_status_t status = SGX_SUCCESS;
-	status = sgx_ocall(14, NULL);
+	status = sgx_ocall(16, NULL);
 
 	return status;
 }
@@ -2004,7 +2089,7 @@ sgx_status_t SGX_CDECL sgx_oc_cpuidex(int cpuinfo[4], int leaf, int subleaf)
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	status = sgx_ocall(15, ms);
+	status = sgx_ocall(17, ms);
 
 	if (status == SGX_SUCCESS) {
 		if (cpuinfo) {
@@ -2041,7 +2126,7 @@ sgx_status_t SGX_CDECL sgx_thread_wait_untrusted_event_ocall(int* retval, const 
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	status = sgx_ocall(16, ms);
+	status = sgx_ocall(18, ms);
 
 	if (status == SGX_SUCCESS) {
 		if (retval) {
@@ -2078,7 +2163,7 @@ sgx_status_t SGX_CDECL sgx_thread_set_untrusted_event_ocall(int* retval, const v
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	status = sgx_ocall(17, ms);
+	status = sgx_ocall(19, ms);
 
 	if (status == SGX_SUCCESS) {
 		if (retval) {
@@ -2120,7 +2205,7 @@ sgx_status_t SGX_CDECL sgx_thread_setwait_untrusted_events_ocall(int* retval, co
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	status = sgx_ocall(18, ms);
+	status = sgx_ocall(20, ms);
 
 	if (status == SGX_SUCCESS) {
 		if (retval) {
@@ -2182,7 +2267,7 @@ sgx_status_t SGX_CDECL sgx_thread_set_multiple_untrusted_events_ocall(int* retva
 		return SGX_ERROR_UNEXPECTED;
 	}
 
-	status = sgx_ocall(19, ms);
+	status = sgx_ocall(21, ms);
 
 	if (status == SGX_SUCCESS) {
 		if (retval) {
