@@ -11,22 +11,20 @@ RUN apt-get update && apt-get install -y \
     llvm \
     openjdk-8-jdk \
     wget \
-    sudo \
-    vim \
     iputils-ping \
     locales \
     cmake \
     libssl-dev \
     python3 \
     python3-pip \
-    gdb \
-    git
+    
 
 # 下载并安装 Intel SGX SDK（适用于 Simulation Mode）
-RUN wget https://download.01.org/intel-sgx/latest/linux-latest/bin/sgx_linux_x64_sdk_latest.bin && \
-    chmod +x sgx_linux_x64_sdk_latest.bin && \
-    echo -e "no\n/opt/intel" | ./sgx_linux_x64_sdk_latest.bin && \
-    rm -f sgx_linux_x64_sdk_latest.bin
+RUN wget https://download.01.org/intel-sgx/latest/linux-latest/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.25.100.3.bin && \
+    chmod +x sgx_linux_x64_sdk_2.25.100.3.bin && \
+    echo -e "no\n/opt/intel" | ./sgx_linux_x64_sdk_2.25.100.3.bin && \
+    rm -f sgx_linux_x64_sdk_2.25.100.3.bin
+    
 
 # 设置 JAVA_HOME 环境变量
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64 

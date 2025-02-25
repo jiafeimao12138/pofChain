@@ -5,17 +5,18 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Component
 public class Payloads {
-    private List<Payload> payloadList = new ArrayList<>();
+    private CopyOnWriteArrayList<Payload> payloadList = new CopyOnWriteArrayList<>();
     private String address;
     private Block newBlock;
 
     public Payloads() {
     }
 
-    public Payloads(List<Payload> payloadList, Block newBlock, String address) {
+    public Payloads(CopyOnWriteArrayList<Payload> payloadList, Block newBlock, String address) {
         this.payloadList = payloadList;
         this.newBlock = newBlock;
         this.address = address;
@@ -25,11 +26,11 @@ public class Payloads {
         return payloadList;
     }
 
-    public void setPayloads(List<Payload> payloadList) {
+    public void setPayloads(CopyOnWriteArrayList<Payload> payloadList) {
         this.payloadList = payloadList;
     }
 
-    public void addPayloads(List<Payload> payloadList1) {
+    public void addPayloads(CopyOnWriteArrayList<Payload> payloadList1) {
         this.payloadList.addAll(payloadList1);
     }
 

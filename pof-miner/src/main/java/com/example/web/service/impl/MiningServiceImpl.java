@@ -35,6 +35,7 @@ import java.math.BigInteger;
 import java.nio.file.*;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.*;
 
 /**
@@ -56,7 +57,7 @@ public class MiningServiceImpl implements MiningService {
     // 存储中间值
     private final Payloads payloads;
     private final ProgramQueue programQueue;
-    private List<Payload> triples;
+    private CopyOnWriteArrayList<Payload> triples;
     private final com.example.base.entities.Node node1;
     private final Mempool mempool;
     private final TransactionService transactionService;

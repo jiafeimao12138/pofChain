@@ -9,20 +9,21 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /*
 * 处理窗口文件testcase和testfile, 生成元组(input, path, iscrash)
 * */
 public class WindowFileUtils {
 
-    static List<Payload> payloads = new ArrayList<>();
+    static CopyOnWriteArrayList<Payload> payloads = new CopyOnWriteArrayList<>();
     static List<String> cases_list = new ArrayList<>();
     static List<List<Integer>> paths_list = new ArrayList<>();
 //    上一个窗口最后一个case和它的path
     static String lastWindowcase = "";
     static List<Integer> lastWindowpath = new ArrayList<>();
 
-    public static List<Payload> windowFilesToTriple(String testcase, String paths, String recordFile) throws WindowFileException{
+    public static CopyOnWriteArrayList<Payload> windowFilesToTriple(String testcase, String paths, String recordFile) throws WindowFileException{
 
         StringBuilder stringBuilder = new StringBuilder();
 

@@ -1,14 +1,35 @@
-#!/bin/bash 
-#set -x
+#!/bin/bash
 
 repo=""
-for arg in `echo $*|awk '{print $0}'`
-do 
-	if [[ $arg == -repo* ]];
-	then
-		repo=`echo $arg|awk -F '=' '{print $2}'`
-	fi
+
+# 遍历所有输入参数
+for arg in "$@"; do
+    if [[ $arg == -repo=* ]]; then
+        repo="${arg#*=}"
+    fi
 done
 
+# Debug: 检查 repo 变量是否正确
+echo "Repo path before resolving: $repo"
 
-java -jar pof-miner/target/pof-miner-0.0.1-SNAPSHOT.jar --spring.config.location=file:$repo/node.properties $*
+# 如果 repo 为空，则报错
+if [[ -z "$repo" ]]; then
+    echo "Error: -repo= parameter is required"
+    exit 1
+fi
+
+# 转换 repo 为绝对路径
+repo=$(realpath "$repo")
+
+# Debug: 检查解析后的 repo
+echo "Resolved repo path: $repo"
+
+# 检查 node.properties 文件是否存在
+if [[ ! -f "$repo/node.properties" ]]; then
+    echo "Error: Config file not found at $repo/node.properties"
+    exit 1
+fi
+
+# 运行 Java 应用
+java -jar pof-miner/target/pof-miner-0.0.1-SNAPSHOT.jar \
+    --spring.config.location="file:$repo/node.properties" "$@"

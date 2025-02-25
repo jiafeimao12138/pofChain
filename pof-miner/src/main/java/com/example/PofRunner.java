@@ -41,13 +41,9 @@ public class PofRunner {
     public boolean preparation() throws IOException {
         String commandType = parser.getArgs().get(0);
         Block block;
-        File repo_dir = new File(repo);
         switch (commandType) {
             case "genesis" :
                 logger.info("创世节点生成中。。。。");
-                if (repo_dir.exists()) {
-                    deleteDirectory(repo_dir);
-                }
                 dbStore = new RocksDBStore(repo);
                 block = generateGenesisBlock();
 
@@ -62,10 +58,6 @@ public class PofRunner {
 
             case "miner" :
                 logger.info("节点加入中。。。。。");
-                if (repo_dir.exists()) {
-                    logger.info("已存在数据库文件，删除");
-                    deleteDirectory(repo_dir);
-                }
                 dbStore = new RocksDBStore(repo);
                 generateGenesisBlock();
                 genPropertiesFile(parser);

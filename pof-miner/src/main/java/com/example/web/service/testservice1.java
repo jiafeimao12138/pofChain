@@ -19,7 +19,7 @@ public class testservice1 {
         payloadList.add(new Payload("hello", Arrays.asList(new Integer[]{12,123,123,12,4}), true));
         payloadList.add(new Payload("hello12", Arrays.asList(new Integer[]{12,123,123,12,4}), true));
         payloadList.add(new Payload("hello34", Arrays.asList(new Integer[]{12,1123,12,4}), false));
-        payloads.addPayloads(payloadList);
+//        payloads.addPayloads(payloadList);
         return payloads;
     }
 }
