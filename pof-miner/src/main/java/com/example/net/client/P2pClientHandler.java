@@ -57,6 +57,9 @@ public class P2pClientHandler extends BaseTioHandler implements TioClientHandler
             case MessagePacketType.RES_BLOCK_BY_HEIGHT:
                 clientHandler.receiveGetBlockByHeightRes(body);
                 break;
+            case MessagePacketType.RES_BLOCK_HEADER:
+                clientHandler.receiveGetBlockHeaderRes(body);
+                break;
             case MessagePacketType.RES_HEIGHT:
                 clientHandler.receiveHeight(body);
                 break;

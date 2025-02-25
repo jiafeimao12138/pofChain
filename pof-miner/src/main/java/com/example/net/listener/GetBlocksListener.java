@@ -7,6 +7,7 @@ import com.example.net.base.MessagePacketType;
 import com.example.net.client.P2pClient;
 import com.example.net.events.GetBlockByHeightEvent;
 import com.example.net.events.GetBlocksEvent;
+import com.example.net.events.GetBlockHeaderByHeightEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -33,4 +34,14 @@ public class GetBlocksListener {
         messagePacket.setBody(SerializeUtils.serialize(height));
         p2pClient.sendToGroup(messagePacket);
     }
+
+    @EventListener(GetBlockHeaderByHeightEvent.class)
+    public void onGetBlockHeaderByHeight(GetBlockHeaderByHeightEvent event) {
+        long height = (long) event.getSource();
+        MessagePacket messagePacket = new MessagePacket();
+        messagePacket.setType(MessagePacketType.REQ_BLOCK_HEADER);
+        messagePacket.setBody(SerializeUtils.serialize(height));
+        p2pClient.sendToGroup(messagePacket);
+    }
+
 }

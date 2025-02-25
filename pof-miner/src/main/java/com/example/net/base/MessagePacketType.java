@@ -39,4 +39,7 @@ public interface MessagePacketType
     byte TERMINATE_FUZZING = 12;
     // 广播新交易
     byte BROADCAST_TX = 13;
+    // 获取区块头
+    byte REQ_BLOCK_HEADER = 14;
+    byte RES_BLOCK_HEADER = -14;
 }

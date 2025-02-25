@@ -1,12 +1,10 @@
 package com.example.net.client;
 
-import com.example.base.entities.Message;
 import com.example.base.entities.Peer;
 import com.example.base.utils.SerializeUtils;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
 import com.example.net.conf.P2pNetConfig;
-import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,11 +16,13 @@ import org.tio.client.TioClientConfig;
 import org.tio.core.ChannelContext;
 import org.tio.core.Node;
 import org.tio.core.Tio;
+import org.tio.server.ServerGroupStat;
 
 import javax.annotation.PostConstruct;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 // 启动 p2pClient
 @Component
@@ -33,11 +33,14 @@ public class P2pClient {
     private final TioClientConfig tioClientConfig;
     private final P2pNetConfig p2pNetConfig;
     private List<ClientChannelContext> channelContextList;
+    private final List<Peer> peerList;
 
 
     public P2pClient(P2pNetConfig p2pNetConfig,
                      P2pClientHandler p2pClientHandler,
-                     P2pClientListener p2pClientListener) {
+                     P2pClientListener p2pClientListener,
+                     List<Peer> peerList) {
+        this.peerList = peerList;
         this.channelContextList = new ArrayList<>();
         // autoReconnect
         ReconnConf reconnConf = new ReconnConf(5000L, 20);
@@ -103,8 +106,9 @@ public class P2pClient {
 //            Tio.send(channelContext, hellopacket);
 //            logger.info("send hello message to {}", node);
         channelContextList.add(channelContext);
+        peerList.add(new Peer(node.getIp(), node.getPort()));
+        logger.info("peerList: {}", peerList);
         return channelContext;
     }
-
 
 }

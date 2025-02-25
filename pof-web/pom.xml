@@ -108,6 +108,19 @@
                     <skip>true</skip>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.0</version>  <!-- 确保是 3.x 版本 -->
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.example.web.client.BlockRpcClient</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

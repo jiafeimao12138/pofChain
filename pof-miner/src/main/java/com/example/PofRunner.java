@@ -39,7 +39,6 @@ public class PofRunner {
     }
 
     public boolean preparation() throws IOException {
-        // 命令类型genesis、mine、init
         String commandType = parser.getArgs().get(0);
         Block block;
         File repo_dir = new File(repo);
@@ -62,8 +61,9 @@ public class PofRunner {
                 break;
 
             case "miner" :
-                logger.info("矿工节点加入中。。。。。");
+                logger.info("节点加入中。。。。。");
                 if (repo_dir.exists()) {
+                    logger.info("已存在数据库文件，删除");
                     deleteDirectory(repo_dir);
                 }
                 dbStore = new RocksDBStore(repo);
@@ -103,7 +103,7 @@ public class PofRunner {
         genesisBlockHeader.setNNonce(2083236893);
         genesisBlockHeader.setNVersion(1);
         genesisBlockHeader.setHashMerkleRoot("");
-        genesisBlockHeader.setHeight(0);
+        genesisBlockHeader.setHeight(0l);
         genesisBlockHeader.setNTime(1732436151);
         genesisBlock.setBlockHeader(genesisBlockHeader);
         genesisBlock.setTransactions(new ArrayList<>());

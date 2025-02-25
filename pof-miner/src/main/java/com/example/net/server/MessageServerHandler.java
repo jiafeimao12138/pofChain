@@ -208,6 +208,16 @@ public class MessageServerHandler {
         return buildPacket(MessagePacketType.RES_BLOCK_BY_HEIGHT, new PacketBody(block, PacketMsgType.SUCEESS), "成功");
     }
 
+    public synchronized MessagePacket receiveGetBlockHeaderByHeight(byte[] msgBody) {
+        long height = (long) SerializeUtils.unSerialize(msgBody);
+        Block block = chainService.getBlockByHeight(height);
+        if (block == null) {
+            // 请求的高度没有区块
+            return buildPacket(MessagePacketType.RES_BLOCK_HEADER, new PacketBody(block, PacketMsgType.FAIL_NO_HEIGHT_BLOCK), "不存在该区块");
+        }
+        return buildPacket(MessagePacketType.RES_BLOCK_HEADER, new PacketBody(block, PacketMsgType.SUCEESS), "成功");
+    }
+
     public synchronized MessagePacket receiveHeightReq(byte[] msgBody) {
         long height = chainService.getLocalLatestBlock().getBlockHeader().getHeight();
         return buildPacket(MessagePacketType.RES_HEIGHT, new PacketBody(height, PacketMsgType.SUCEESS), "成功");

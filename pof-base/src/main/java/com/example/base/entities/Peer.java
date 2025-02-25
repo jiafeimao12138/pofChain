@@ -47,6 +47,10 @@ public class Peer {
         this.port = port;
     }
 
+    public String getUrl() {
+        return String.format("%s:%s", getIp(), getPort());
+    }
+
     @Override
     public String toString()
     {

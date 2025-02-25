@@ -12,9 +12,9 @@ public class BlockHeader {
     private int nVersion = 0;
     private String hashPreBlock = "";
     private String hashMerkleRoot = "";
-    private long height = 0;
+    private long height = 0l;
     private long nTime = System.currentTimeMillis();
-    private long nNonce = 0;
+    private long nNonce = 0l;
     //    当前的hash目标
     private int nBits = 0;
     private List<Payload> triples = new ArrayList<>();

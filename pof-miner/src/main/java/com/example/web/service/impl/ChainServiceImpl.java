@@ -1,10 +1,12 @@
 package com.example.web.service.impl;
 
 import com.example.base.entities.block.Block;
+import com.example.base.entities.block.BlockHeader;
 import com.example.base.store.BlockPrefix;
 import com.example.base.store.DBStore;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.events.GetBlockByHeightEvent;
+import com.example.net.events.GetBlockHeaderByHeightEvent;
 import com.example.net.events.GetHeightEvent;
 import com.example.web.service.ChainService;
 import org.springframework.stereotype.Service;
@@ -28,11 +30,20 @@ public class ChainServiceImpl implements ChainService {
         this.rocksDBStore = dbStore;
     }
 
-    // 同步区块链
+    /**
+     * 同步区块链
+     * @param isFullNode 是否全节点
+     * @param height 开始同步的高度
+     */
     @Override
-    public void syncBlockChain(long height) {
-        // TODO：只向8-10个peer发送这个请求
-        ApplicationContextProvider.publishEvent(new GetBlockByHeightEvent(height));
+    public void syncBlockChain(boolean isFullNode, long height) {
+        if (isFullNode) {
+            // 同步整个区块
+            ApplicationContextProvider.publishEvent(new GetBlockByHeightEvent(height));
+        } else {
+            // 只同步区块头
+            ApplicationContextProvider.publishEvent(new GetBlockHeaderByHeightEvent(height));
+        }
     }
 
     @Override
@@ -48,6 +59,18 @@ public class ChainServiceImpl implements ChainService {
             Block block = (Block) o.get();
             readLock.unlock();
             return block;
+        }
+        return null;
+    }
+
+    @Override
+    public BlockHeader getBlockHeaderByHeight(long height) {
+        readLock.lock();
+        Optional<Object> o = rocksDBStore.get(BlockPrefix.BLOCK_HEIGHT_PREFIX.getPrefix() + height);
+        if (o.isPresent()) {
+            Block block = (Block) o.get();
+            readLock.unlock();
+            return block.getBlockHeader();
         }
         return null;
     }
@@ -70,7 +93,15 @@ public class ChainServiceImpl implements ChainService {
         Block block = new Block();
         Optional<Object> o = rocksDBStore.get(BlockPrefix.HEIGHT.getPrefix());
         if (o.isPresent()) {
-            long height = (long)o.get();
+            long height;
+            Object value = o.get();
+            if (value instanceof Integer) {
+                height = ((Integer) value).longValue();  // Integer 转 Long
+            } else if (value instanceof Long) {
+                height = (Long) value;
+            } else {
+                throw new IllegalStateException("Unexpected type: " + value.getClass());
+            }
             block = getBlockByHeight(height);
             readLock.unlock();
             return block;
@@ -90,7 +121,15 @@ public class ChainServiceImpl implements ChainService {
         readLock.lock();
         Optional<Object> o = rocksDBStore.get(BlockPrefix.CHAIN_HEIGHT.getPrefix());
         if (o.isPresent()) {
-            long height = (long) o.get();
+            long height;
+            Object value = o.get();
+            if (value instanceof Integer) {
+                height = ((Integer) value).longValue();  // Integer 转 Long
+            } else if (value instanceof Long) {
+                height = (Long) value;
+            } else {
+                throw new IllegalStateException("Unexpected type: " + value.getClass());
+            }
             readLock.unlock();
             return height;
         }
@@ -107,9 +146,16 @@ public class ChainServiceImpl implements ChainService {
         readLock.lock();
         ArrayList<Long> heights = new ArrayList<>();
         Optional<Object> o = rocksDBStore.get(BlockPrefix.HEIGHT.getPrefix());
-        long height = 0;
+        long height = -1;
         if (o.isPresent()) {
-            height = (long) o.get();
+            Object value = o.get();
+            if (value instanceof Integer) {
+                height = ((Integer) value).longValue();  // Integer 转 Long
+            } else if (value instanceof Long) {
+                height = (Long) value;
+            } else {
+                throw new IllegalStateException("Unexpected type: " + value.getClass());
+            }
         }
         for (long i = height; i >= 0 ; i--) {
             heights.add(i);

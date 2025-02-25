@@ -3,6 +3,7 @@ package com.example.net.client;
 import com.example.base.entities.block.Block;
 import com.example.base.entities.Peer;
 import com.example.base.entities.ProgramQueue;
+import com.example.base.entities.block.BlockHeader;
 import com.example.base.utils.SerializeUtils;
 import com.example.fuzzed.ProgramService;
 import com.example.net.base.PacketBody;
@@ -57,6 +58,16 @@ public class MessageClientHandler {
         } else {
             logger.info("不接收该区块");
         }
+    }
+
+    public void receiveGetBlockHeaderRes(byte[] body) {
+        PacketBody packetBody = (PacketBody) SerializeUtils.unSerialize(body);
+        if (!packetBody.isSuccess()) {
+            return;
+        }
+        //先判断接收到的区块头是否已经在本地区块链中存在
+        BlockHeader blockHeader = (BlockHeader) packetBody.getItem();
+        
     }
 
     public void receiveHeight(byte[] body) {
