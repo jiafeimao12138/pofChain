@@ -35,7 +35,6 @@ public class TXInput {
 
     private byte[] scriptSig = null;
 
-
     public TXInput(byte[] previousTXId) {
         this.previousTXId = previousTXId;
     }
@@ -54,8 +53,8 @@ public class TXInput {
      * Creates an input that connects to nothing - used only in creation of coinbase transactions.
      * @return
      */
-    public static TXInput coinbaseInput(byte[] scriptBytes) {
-        return new TXInput(scriptBytes);
+    public static TXInput coinbaseInput(byte[] coinBaseData) {
+        return new TXInput(coinBaseData);
     }
 
 

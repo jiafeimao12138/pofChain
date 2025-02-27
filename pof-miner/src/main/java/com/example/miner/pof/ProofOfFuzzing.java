@@ -118,12 +118,10 @@ public class ProofOfFuzzing {
 
         Block newBlock = new Block();
         BlockHeader blockHeader = new BlockHeader();
-        blockHeader.setNVersion(1);
         blockHeader.setHashPreBlock(preBlock.getHash());
         blockHeader.setNTime(timestamp);
         blockHeader.setNNonce(nonce);
         blockHeader.setHeight(height);
-        blockHeader.setTriples(triples);
         blockHeader.setHashMerkleRoot("");
         newBlock.setBlockHeader(blockHeader);
         newBlock.setTransactions(transactionList);

@@ -9,7 +9,6 @@ import java.util.Objects;
 
 @Data
 public class BlockHeader {
-    private int nVersion = 0;
     private String hashPreBlock = "";
     private String hashMerkleRoot = "";
     private long height = 0l;
@@ -17,14 +16,14 @@ public class BlockHeader {
     private long nNonce = 0l;
     //    当前的hash目标
     private int nBits = 0;
-    private List<Payload> triples = new ArrayList<>();
+
 
     public BlockHeader() {
 
     }
 
 
-    public BlockHeader(int nVersion,
+    public BlockHeader(
                        String hashPreBlock,
                        String hashMerkleRoot,
                        long height,
@@ -32,27 +31,23 @@ public class BlockHeader {
                        long nNonce,
                        int nBits,
                        List<Payload> triples) {
-        this.nVersion = nVersion;
         this.hashPreBlock = hashPreBlock;
         this.hashMerkleRoot = hashMerkleRoot;
         this.height = height;
         this.nTime = nTime;
         this.nNonce = nNonce;
         this.nBits = nBits;
-        this.triples = triples;
     }
 
     @Override
     public String toString() {
         return "BlockHeader{" +
-                "nVersion=" + nVersion +
-                ", hashPreBlock='" + hashPreBlock + '\'' +
+                "hashPreBlock='" + hashPreBlock + '\'' +
                 ", hashMerkleRoot='" + hashMerkleRoot + '\'' +
                 ", height=" + height +
                 ", nTime=" + nTime +
                 ", nNonce=" + nNonce +
                 ", nBits=" + nBits +
-                ", triples=" + triples +
                 '}';
     }
 
@@ -61,18 +56,17 @@ public class BlockHeader {
         if (this == o) return true;
         if (!(o instanceof BlockHeader)) return false;
         BlockHeader that = (BlockHeader) o;
-        return nVersion == that.nVersion &&
+        return
                 height == that.height &&
                 nTime == that.nTime &&
                 nNonce == that.nNonce &&
                 nBits == that.nBits &&
                 Objects.equals(hashPreBlock, that.hashPreBlock) &&
-                Objects.equals(hashMerkleRoot, that.hashMerkleRoot) &&
-                Objects.equals(triples, that.triples);
+                Objects.equals(hashMerkleRoot, that.hashMerkleRoot);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(nVersion, hashPreBlock, hashMerkleRoot, height, nTime, nNonce, nBits, triples);
+        return Objects.hash(hashPreBlock, hashMerkleRoot, height, nTime, nNonce, nBits);
     }
 }

@@ -1,5 +1,7 @@
 package com.example.web.controller;
 
+import com.example.base.entities.Node;
+import com.example.base.entities.NodeType;
 import com.example.base.entities.transaction.Transaction;
 import com.example.base.entities.wallet.Wallet;
 import com.example.base.entities.wallet.WalletUtils;
@@ -37,6 +39,7 @@ public class WalletController {
 
     private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private final Lock writeLock = rwl.writeLock();
+    private final Node node;
 
     @Value("${wallet.address}")
     private String filePath;
@@ -54,6 +57,9 @@ public class WalletController {
             logger.info("钱包地址已成功保存到{}" ,filePath);
         } catch (IOException e) {
             e.printStackTrace(); // 打印异常信息
+        }
+        if (node.getType().equals(NodeType.SUPPLIER)) {
+            MockSupplierOriginBalance(address);
         }
     }
 
@@ -110,6 +116,11 @@ public class WalletController {
         logger.info("地址{}的余额为{}", address, balance);
     }
 
+    @RequestMapping("getAllBalance")
+    public void getAllBalance() {
+
+    }
+
     private void MockCoinbaseTX(String address) throws Exception {
         Transaction coinbaseTransaction = transactionService.createCoinbaseTransaction(address, 1, 10, 2);
         transactionService.storeMempool(coinbaseTransaction);
@@ -120,5 +131,19 @@ public class WalletController {
 //        dbStore.close();
         writeLock.unlock();
         logger.info("已将交易{}存入数据库", txId);
+    }
+
+    /**
+     * 给supplier账户预先发放fake coin，不然没钱付费
+     * @param address
+     */
+    private void MockSupplierOriginBalance(String address){
+        Transaction coinbaseTransaction = transactionService.createCoinbaseTransaction(address, 1, 1000000, 0);
+        transactionService.storeMempool(coinbaseTransaction);
+        writeLock.lock();
+        String txId = coinbaseTransaction.getTxIdStr();
+        dbStore.put(WalletPrefix.TX_PREFIX.getPrefix() + txId, coinbaseTransaction);
+        dbStore.put(WalletPrefix.UTXO_PREFIX.getPrefix() + txId, coinbaseTransaction.getOutputs());
+        writeLock.unlock();
     }
 }

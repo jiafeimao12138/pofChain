@@ -342,7 +342,7 @@ public class MiningServiceImpl implements MiningService {
         Block newBlock = computeWindowHash(preBlock, transactions, triples);
         String newHash = newBlock.getHash();
         logger.info("比较一下：newHash={}, newBlock.getHash={}", newHash, newBlock.getHash());
-        logger.info("新区块中的payload长度为：{}", newBlock.getBlockHeader().getTriples().size());
+        logger.info("新区块中的payload长度为：{}", newBlock.getPayloads().size());
         // 当命中区间
         if(isInInterval(newHash, head, end)) {
             // 挖矿成功，并且提交payloads
@@ -363,7 +363,7 @@ public class MiningServiceImpl implements MiningService {
         Files.newBufferedWriter(pathFile).close();
     }
 
-    public Block computeWindowHash(Block preBlock, List<Transaction> transactionList, List<Payload> triples){
+    public Block computeWindowHash(Block preBlock, List<Transaction> transactionList, List<Payload> payloads){
         Random random = new Random();
         long nonce = random.nextLong();
         long timestamp = System.currentTimeMillis();
@@ -371,16 +371,15 @@ public class MiningServiceImpl implements MiningService {
 
         Block newBlock = new Block();
         BlockHeader blockHeader = new BlockHeader();
-        blockHeader.setNVersion(1);
         blockHeader.setHashPreBlock(preBlock.getHash());
         blockHeader.setNTime(timestamp);
         blockHeader.setNNonce(nonce);
         blockHeader.setHeight(height);
-        blockHeader.setTriples(triples);
         blockHeader.setHashMerkleRoot("");
 
         newBlock.setBlockHeader(blockHeader);
         newBlock.setTransactions(transactionList);
+        newBlock.setPayloads(payloads);
         return newBlock;
     }
 

@@ -12,12 +12,23 @@ public class Reward {
         MEDIUM,
         HIGH,
         CRITICAL,
-        NEWPATH,
-        NPATH_QUOTA
+        NEWPATH,           // 每条新路径奖励
+        NPATH_QUOTA        // 每次奖励前几名
     }
 
 
-    private final Map<REWARDTYPE, Integer> RewardHashmap = new HashMap<>();
+    private final Map<REWARDTYPE, Integer> RewardHashmap;
+
+    // 初始化
+    {
+        RewardHashmap = new HashMap<>();
+        this.RewardHashmap.put(REWARDTYPE.NEWPATH, 0);
+        this.RewardHashmap.put(REWARDTYPE.NPATH_QUOTA, 0);
+        this.RewardHashmap.put(REWARDTYPE.CRITICAL, 0);
+        this.RewardHashmap.put(REWARDTYPE.HIGH, 0);
+        this.RewardHashmap.put(REWARDTYPE.LOW, 0);
+        this.RewardHashmap.put(REWARDTYPE.MEDIUM, 0);
+    }
 
 
     public Reward() {

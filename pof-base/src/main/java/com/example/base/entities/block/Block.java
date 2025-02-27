@@ -1,8 +1,10 @@
 package com.example.base.entities.block;
 
+import com.example.base.entities.Payload;
 import com.example.base.entities.transaction.Transaction;
 import com.example.base.crypto.CryptoUtils;
 import com.example.base.utils.ByteUtils;
+import com.example.base.utils.MerkleTree;
 import com.example.base.utils.SerializeUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
@@ -25,15 +27,27 @@ public class Block implements Serializable {
 //    header
     private BlockHeader blockHeader;
     private List<Transaction> transactions = new ArrayList<>();
+    private List<Payload> payloads = new ArrayList<>();
 
     public Block() {
     }
 
     public Block(BlockHeader blockHeader,
-                 List<Transaction> transactions
+                 List<Transaction> transactions,
+                 List<Payload> payloads
                  ) {
+        blockHeader.setHashMerkleRoot(ByteUtils.bytesToHex(calculateMerkleRoot(transactions)));
         this.blockHeader = blockHeader;
         this.transactions = transactions;
+        this.payloads = payloads;
+    }
+
+    public byte[] calculateMerkleRoot(List<Transaction> transactions) {
+        byte[][] txIdArrays = new byte[transactions.size()][];
+        for (int i = 0; i < this.getTransactions().size(); i++) {
+            txIdArrays[i] = Sha256Hash.hash(SerializeUtils.serialize(this.getTransactions().get(i)));
+        }
+        return new MerkleTree(txIdArrays).getRoot().getHash();
     }
 
     @JsonIgnore
@@ -50,12 +64,12 @@ public class Block implements Serializable {
         if (this == o) return true;
         if (!(o instanceof Block)) return false;
         Block block = (Block) o;
-        return blockHeader.equals(block.getBlockHeader()) && Objects.equals(transactions, block.transactions);
+        return Objects.equals(blockHeader, block.blockHeader) && Objects.equals(transactions, block.transactions) && Objects.equals(payloads, block.payloads);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(blockHeader, transactions);
+        return Objects.hash(blockHeader, transactions, payloads);
     }
 
     @Override
@@ -63,6 +77,7 @@ public class Block implements Serializable {
         return "Block{" +
                 "blockHeader=" + blockHeader.toString() +
                 ", transactions=" + transactions.toString() +
+                ", payloads=" + payloads +
                 '}';
     }
 }

@@ -7,6 +7,8 @@ public interface TransactionService {
     Transaction createCoinbaseTransaction(String address, long height, int blockReward, int fee);
     // 创建新普通交易
     Transaction createCommonTransaction(String fromAddress, String toAddress, int amount, int fee) throws Exception;
+    // 创建supplier奖励交易
+    Transaction createFuzzingRewardTransaction(String fromAddress, String toAddress, int amount);
     // 校验交易
     boolean verify(Transaction transaction) throws Exception;
     // 存入本地数据库

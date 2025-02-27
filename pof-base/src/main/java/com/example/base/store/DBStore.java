@@ -1,5 +1,6 @@
 package com.example.base.store;
 
+import com.example.base.entities.transaction.TXOutput;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -12,6 +13,8 @@ public interface DBStore {
 
     // get an item from database with the specified key
     Optional<Object> get(String key);
+
+    List<TXOutput> getUTXO(String key);
 
     // delete an item from database with the specified key
     boolean delete(String key);

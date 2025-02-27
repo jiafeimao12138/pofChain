@@ -1,5 +1,6 @@
 package com.example.base.store;
 
+import com.example.base.entities.transaction.TXOutput;
 import com.example.base.utils.SerializeUtils;
 import org.rocksdb.*;
 import org.slf4j.Logger;
@@ -46,6 +47,20 @@ public class RocksDBStore implements DBStore{
             // ignore
 //            e.printStackTrace();
             return Optional.empty();
+        }
+    }
+
+    @Override
+    public List<TXOutput> getUTXO(String key) {
+        try {
+            Optional<Object> o = Optional.of(SerializeUtils.unSerialize(rocksDB.get(key.getBytes())));
+            if (o.isPresent()) {
+                List<TXOutput> txOutputs = (List<TXOutput>)o.get();
+                return txOutputs;
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
         }
     }
 

@@ -3,6 +3,7 @@ package com.example.web.controller;
 import com.example.base.entities.block.Block;
 import com.example.base.vo.JsonVo;
 import com.example.web.service.ChainService;
+import com.example.web.service.impl.FakeTXGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,6 +19,12 @@ import java.util.List;
 public class ObserverController {
 
     private final ChainService chainService;
+    private final FakeTXGenerator generator;
+
+    @RequestMapping("generateFakeTXs")
+    public void generateFakeTXs() throws Exception {
+        generator.generateTransactions();
+    }
 
     /**
      * 同步区块

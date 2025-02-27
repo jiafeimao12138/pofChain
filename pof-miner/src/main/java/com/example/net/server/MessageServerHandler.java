@@ -175,7 +175,7 @@ public class MessageServerHandler {
             List<NewPath> newPathList = entry.getValue();
             String address = entry.getKey();
             int rewardValue = newPathList.size() * Transaction.NEW_PATH_REWARD;
-            Transaction rewardTX = transactionService.createCommonTransaction(walletService.getWalletAddress(0), address, rewardValue, 0);
+            Transaction rewardTX = transactionService.createFuzzingRewardTransaction(walletService.getWalletAddress(0), address, rewardValue);
             // 广播
             ApplicationContextProvider.publishEvent(new NewTransactionEvent(rewardTX));
         }

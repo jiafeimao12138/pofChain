@@ -39,6 +39,7 @@ public class SupplierController {
         // @TODO：supplier上传源代码
         programService.prepareTargetProgram("supplierfiles/string_length.c",
                 "supplierfiles/string_length_publish");
+
     }
 
     /**
@@ -67,4 +68,5 @@ public class SupplierController {
         }
         return arrayList;
     }
+
 }

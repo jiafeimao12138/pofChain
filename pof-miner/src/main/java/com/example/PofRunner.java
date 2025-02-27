@@ -93,7 +93,6 @@ public class PofRunner {
         genesisBlockHeader.setHashPreBlock("00000000000000");
         genesisBlockHeader.setNBits(0x1d00ffff);
         genesisBlockHeader.setNNonce(2083236893);
-        genesisBlockHeader.setNVersion(1);
         genesisBlockHeader.setHashMerkleRoot("");
         genesisBlockHeader.setHeight(0l);
         genesisBlockHeader.setNTime(1732436151);

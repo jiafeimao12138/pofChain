@@ -1,15 +1,21 @@
 package com.example.web.service.impl;
 
+import com.example.base.entities.transaction.TXInput;
 import com.example.base.entities.transaction.TXOutput;
+import com.example.base.entities.transaction.Transaction;
 import com.example.base.entities.transaction.UTXOSet;
 import com.example.base.entities.wallet.Wallet;
 import com.example.base.entities.wallet.WalletUtils;
+import com.example.base.store.DBStore;
+import com.example.base.store.WalletPrefix;
 import com.example.base.utils.Base58Check;
+import com.example.base.utils.ByteUtils;
 import com.example.web.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -18,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +35,10 @@ public class WalletServiceImpl implements WalletService {
     private final UTXOSet utxoSet;
     @Value("${wallet.address}")
     private String addressFilePath;
+    private final DBStore dbStore;
+
+    private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+    private final Lock writeLock = rwl.writeLock();
 
     @Override
     public String createWallet() {
@@ -86,5 +98,28 @@ public class WalletServiceImpl implements WalletService {
         byte[] pubKeyHash = Arrays.copyOfRange(versionedPayload, 1, versionedPayload.length);
         List<TXOutput> utxOs = utxoSet.findUTXOs(pubKeyHash);
         return utxOs;
+    }
+
+    /**
+     * 移除已花费的TXOutput
+     * @param transaction
+     */
+    @Override
+    public void removeSpentTXOutput(Transaction transaction) {
+        writeLock.lock();
+        List<TXInput> inputs = transaction.getInputs();
+
+        for (TXInput input : inputs) {
+            String TXId = ByteUtils.bytesToHex(input.getPreviousTXId());
+            List<TXOutput> utxos = dbStore.getUTXO(WalletPrefix.UTXO_PREFIX.getPrefix() + TXId);
+            if (CollectionUtils.isEmpty(utxos))
+                break;
+            utxos.remove(input.getTxOutputIndex());
+            dbStore.delete(WalletPrefix.UTXO_PREFIX.getPrefix() + TXId);
+            if (!CollectionUtils.isEmpty(utxos)){
+                dbStore.put(WalletPrefix.UTXO_PREFIX.getPrefix() + TXId, utxos);
+            }
+        }
+        writeLock.unlock();
     }
 }

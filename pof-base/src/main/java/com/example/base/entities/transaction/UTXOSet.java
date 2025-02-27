@@ -1,17 +1,13 @@
 package com.example.base.entities.transaction;
 
 import com.example.base.store.DBStore;
-import com.example.base.store.RocksDBStore;
 import com.example.base.store.WalletPrefix;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Import;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 
 @Component
 @RequiredArgsConstructor
@@ -20,7 +16,6 @@ public class UTXOSet {
     private final DBStore dbStore;
     private static ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private static Lock readLock = rwl.readLock();
-
 
 
     /**
@@ -33,16 +28,16 @@ public class UTXOSet {
         readLock.lock();
         List<TXOutput> utxos = new ArrayList<>();
         List<List<TXOutput>> utxoList = dbStore.search(WalletPrefix.UTXO_PREFIX.getPrefix());
-        System.out.println("utxoList size: " + utxoList.size());
+//        System.out.println("utxoList size: " + utxoList.size());
         for (List<TXOutput> txOutputs : utxoList) {
             for (TXOutput txOutput : txOutputs) {
-                System.out.println(txOutput.toString());
+//                System.out.println(txOutput.toString());
                 if (txOutput.isLockedWithKey(pubKeyHash)) {
                     utxos.add(txOutput);
                 }
             }
         }
-        dbStore.close();
+//        dbStore.close();
         readLock.unlock();
         return utxos;
     }
@@ -52,15 +47,14 @@ public class UTXOSet {
      * @param TXId
      * @return
      */
-    public static List<TXOutput> getPreUTXO(String TXId) {
+    public List<TXOutput> getPreUTXO(String TXId) {
         readLock.lock();
         List<TXOutput> txOutputs = new ArrayList<>();
-        DBStore dbStore = new RocksDBStore("/home/wj/datastore/wallet");
         Optional<Object> o = dbStore.get(WalletPrefix.UTXO_PREFIX.getPrefix() + TXId);
         if (o.isPresent()) {
             txOutputs = (List<TXOutput>)o.get();
         }
-        dbStore.close();
+//        dbStore.close();
         readLock.unlock();
         return txOutputs;
     }
