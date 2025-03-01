@@ -1,9 +1,7 @@
 package com.example.web.controller;
 
-import com.example.base.entities.block.Block;
 import com.example.base.entities.Node;
 import com.example.base.entities.NodeType;
-import com.example.base.vo.JsonVo;
 import com.example.web.service.ChainService;
 import com.example.web.service.MiningService;
 import com.example.web.service.ProcessService;
@@ -24,9 +22,9 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("fuzzer")
-public class FuzzerController {
+public class MinerController {
 
-    private static final Logger logger = LoggerFactory.getLogger(FuzzerController.class);
+    private static final Logger logger = LoggerFactory.getLogger(MinerController.class);
 
     private final MiningService miningService;
     private final ChainService chainService;

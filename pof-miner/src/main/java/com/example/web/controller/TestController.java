@@ -39,7 +39,7 @@ public class TestController {
 
     @RequestMapping("/getPayloads")
     public void getPayloads2() {
-        System.out.println(service2.getPayloads());
+        System.out.println(service2.getPayloadManager());
     }
 
     @RequestMapping("/getProgramQueue")

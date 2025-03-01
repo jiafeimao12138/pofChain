@@ -5,7 +5,6 @@ import com.example.base.vo.JsonVo;
 import com.example.web.service.ChainService;
 import com.example.web.service.impl.FakeTXGenerator;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,7 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("common")
 @RequiredArgsConstructor
-public class ObserverController {
+public class CommonController {
 
     private final ChainService chainService;
     private final FakeTXGenerator generator;

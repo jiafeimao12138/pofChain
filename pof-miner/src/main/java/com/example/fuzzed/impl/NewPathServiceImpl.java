@@ -29,6 +29,13 @@ public class NewPathServiceImpl implements NewPathService {
     private final Lock readLock = rwl.readLock();
     private final Lock writeLock = rwl.writeLock();
 
+    /**
+     * 处理payloads，以及测试指标
+     * @param payloads
+     * @param timestamp
+     * @param fuzzerAddress
+     * @return
+     */
     @Override
     public List<NewPath> ProcessPayloads(List<Payload> payloads, long timestamp, String fuzzerAddress) {
         HashSet<List<Integer>> paths = new HashSet<>();

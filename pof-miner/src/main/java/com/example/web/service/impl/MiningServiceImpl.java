@@ -55,7 +55,7 @@ public class MiningServiceImpl implements MiningService {
     private final ValidationService validationService;
     private final P2pClient p2pClient;
     // 存储中间值
-    private final Payloads payloads;
+    private final PayloadManager payloadManager;
     private final ProgramQueue programQueue;
     private CopyOnWriteArrayList<Payload> triples;
     private final com.example.base.entities.Node node1;
@@ -313,7 +313,7 @@ public class MiningServiceImpl implements MiningService {
                 recordFile
                 );
         // 向中间值添加本轮挖矿的path信息，等到新区块成功挖出后再置空
-        payloads.addPayloads(triples);
+        payloadManager.addPayloads(triples);
 //        if(!extractTrailingNumber(testcaseFile.toString()).equals(extractTrailingNumber(pathFile.toString()))) {
 //            logger.error("错误！！！读取窗口文件错误！！！,{},{}", testcaseFile, pathFile);
 //        }
@@ -410,13 +410,13 @@ public class MiningServiceImpl implements MiningService {
         // 校验新区块
         if (validationService.processNewMinedBlock(newBlock)) {
             // 提交给supplier
-            payloads.setNewBlock(newBlock);
+            payloadManager.setNewBlock(newBlock);
             // fuzzerAddress获取
             String address = walletService.getWalletAddress(0);
-            payloads.setAddress(address);
+            payloadManager.setAddress(address);
             MessagePacket messagePacket = new MessagePacket();
             messagePacket.setType(MessagePacketType.PAYLOADS_SUBMIT);
-            messagePacket.setBody(SerializeUtils.serialize(payloads));
+            messagePacket.setBody(SerializeUtils.serialize(payloadManager));
             // 发送给supplier
             List<ClientChannelContext> channelContextList = p2pClient.getChannelContextList();
             // 在维护的列表中查找supplier
@@ -424,9 +424,9 @@ public class MiningServiceImpl implements MiningService {
                 Node serverNode = channelContext.getServerNode();
                 if (serverNode.getIp().equals(supplier.getIp()) && serverNode.getPort() == supplier.getPort()) {
                     // supplier在列表中，直接发送消息即可
-                    logger.info("提交之前payloads：{}", payloads.getPayloads().size());
+                    logger.info("提交之前payloads：{}", payloadManager.getPayloads().size());
                     p2pClient.sendToNode(channelContext, messagePacket);
-                    payloads.setNull();
+                    payloadManager.setNull();
                     return true;
                 }
             }
@@ -434,7 +434,7 @@ public class MiningServiceImpl implements MiningService {
             try {
                 ClientChannelContext channelContext = p2pClient.connect(new Node(supplier.getIp(), supplier.getPort()));
                 p2pClient.sendToNode(channelContext, messagePacket);
-                payloads.setNull();
+                payloadManager.setNull();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

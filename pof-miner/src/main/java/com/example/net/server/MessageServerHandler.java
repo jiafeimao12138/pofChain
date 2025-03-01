@@ -44,7 +44,7 @@ public class MessageServerHandler {
     private final ChainService chainService;
     private final P2pClient p2pClient;
     private final NewPathService newPathService;
-    private final Payloads payloads;
+    private final PayloadManager payloadManager;
     private final NewPathManager newPathManager;
     private final ProgramQueue programQueue;
     private final ProcessService processService;
@@ -95,13 +95,13 @@ public class MessageServerHandler {
         // 广播给其他peer
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
         // 存储新区块后，需要汇报该Fuzzer自己本轮挖掘出的path信息,并附上新区块
-        payloads.setNewBlock(newBlock);
+        payloadManager.setNewBlock(newBlock);
         // fuzzerAddress获取
         String address = walletService.getWalletAddress(0);
-        payloads.setAddress(address);
+        payloadManager.setAddress(address);
         MessagePacket messagePacket = new MessagePacket();
         messagePacket.setType(MessagePacketType.PAYLOADS_SUBMIT);
-        messagePacket.setBody(SerializeUtils.serialize(payloads));
+        messagePacket.setBody(SerializeUtils.serialize(payloadManager));
         // 发送给supplier
         Peer supplier = peerService.getSupplierPeer();
         List<ClientChannelContext> channelContextList = p2pClient.getChannelContextList();
@@ -111,14 +111,14 @@ public class MessageServerHandler {
             if (serverNode.getIp().equals(supplier.getIp()) && serverNode.getPort() == supplier.getPort()) {
                 // supplier在列表中，直接发送消息即可
                 p2pClient.sendToNode(channelContext, messagePacket);
-                payloads.setNull();
+                payloadManager.setNull();
             }
         }
         // 如果没查到，重新连接
         try {
             ClientChannelContext channelContext = p2pClient.connect(new Node(supplier.getIp(), supplier.getPort()));
             p2pClient.sendToNode(channelContext, messagePacket);
-            payloads.setNull();
+            payloadManager.setNull();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -251,11 +251,11 @@ public class MessageServerHandler {
 
     // supplier接收并处理fuzzer提交的payloads
     public synchronized boolean processPayloads(byte[] msgBody, long timestamp) {
-        Payloads payloads = (Payloads) SerializeUtils.unSerialize(msgBody);
-        List<Payload> pathList = payloads.getPayloads();
+        PayloadManager payloadManager = (PayloadManager) SerializeUtils.unSerialize(msgBody);
+        List<Payload> pathList = payloadManager.getPayloads();
         logger.info("收到的payloads的大小:{}", pathList.size());
-        String address = payloads.getAddress();
-        Block newBlock = payloads.getNewBlock();
+        String address = payloadManager.getAddress();
+        Block newBlock = payloadManager.getNewBlock();
         // 先校验newBlock
         if(validationService.supplierCheckNewBlock(newBlock)) {
             logger.info("通过supplier校验，开始筛选NewPath");

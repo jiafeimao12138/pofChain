@@ -1,6 +1,5 @@
 package com.example.base.entities.transaction;
 
-import com.example.base.utils.BtcAddressUtils;
 import com.example.base.utils.ByteUtils;
 import com.example.base.utils.SerializeUtils;
 import lombok.Data;
@@ -8,20 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.bitcoinj.base.Sha256Hash;
-import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey;
-import org.bouncycastle.jce.ECNamedCurveTable;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.jce.spec.ECParameterSpec;
-import org.bouncycastle.jce.spec.ECPublicKeySpec;
-import org.bouncycastle.math.ec.ECPoint;
 import org.springframework.util.CollectionUtils;
-
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.security.KeyFactory;
-import java.security.PublicKey;
-import java.security.Security;
-import java.security.Signature;
 import java.util.*;
 
 @Data

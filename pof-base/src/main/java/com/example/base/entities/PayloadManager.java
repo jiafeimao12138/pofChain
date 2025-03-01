@@ -3,20 +3,19 @@ package com.example.base.entities;
 import com.example.base.entities.block.Block;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Component
-public class Payloads {
+public class PayloadManager {
     private CopyOnWriteArrayList<Payload> payloadList = new CopyOnWriteArrayList<>();
     private String address;
     private Block newBlock;
 
-    public Payloads() {
+    public PayloadManager() {
     }
 
-    public Payloads(CopyOnWriteArrayList<Payload> payloadList, Block newBlock, String address) {
+    public PayloadManager(CopyOnWriteArrayList<Payload> payloadList, Block newBlock, String address) {
         this.payloadList = payloadList;
         this.newBlock = newBlock;
         this.address = address;
