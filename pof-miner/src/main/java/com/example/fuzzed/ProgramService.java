@@ -1,6 +1,7 @@
 package com.example.fuzzed;
 
 import com.example.base.entities.Peer;
+import com.example.base.entities.Program;
 import com.sun.jmx.remote.internal.ArrayQueue;
 import lombok.Getter;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -13,6 +14,6 @@ public interface ProgramService {
 
     boolean prepareTargetProgram(String path, String objPath);
     String byteToFile(byte[] fileBytes, String path, String name);
-    Pair<String, Peer> chooseTargetProgram(String dirPath, ArrayDeque<MutablePair<byte[], Peer>> queue);
-
+    Pair<String, Peer> chooseTargetProgram(String dirPath, ArrayDeque<Program> queue);
+    boolean receiveProgram(Program program, String path);
 }

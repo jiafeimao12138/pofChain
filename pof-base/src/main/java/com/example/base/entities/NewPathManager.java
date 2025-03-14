@@ -9,6 +9,7 @@ import java.util.List;
 @Component
 public class NewPathManager {
     private HashMap<String, List<NewPath>> paths = new HashMap<>();
+    private int totalPath;
 
     public boolean addPathHashMap(String address, List<NewPath> paths) {
         if (this.paths.containsKey(address)) {
@@ -18,8 +19,20 @@ public class NewPathManager {
         return true;
     }
 
+    public void clearPathMap() {
+        paths.clear();
+    }
+
     public HashMap<String, List<NewPath>> getPaths() {
         return paths;
+    }
+
+    public int getTotalPath() {
+        return this.totalPath;
+    }
+
+    public void setTotalPath(int num) {
+        this.totalPath = num;
     }
 
 }

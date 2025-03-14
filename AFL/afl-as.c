@@ -278,6 +278,8 @@ static void add_instrumentation(void) {
         instrument_next && line[0] == '\t' && isalpha(line[1])) {
       int random_key = R(MAP_SIZE);
       printf("random_key=%d\n",random_key);
+      // 保存random_key
+
       printf(line);
       // printf("file_line=%d\n",file_line);
       fprintf(outf, use_64bit ? trampoline_fmt_64 : trampoline_fmt_32,

@@ -7,17 +7,19 @@ import java.util.ArrayDeque;
 
 @Component
 public class ProgramQueue {
-    private ArrayDeque<MutablePair<byte[], Peer>> ProgramQueue = new ArrayDeque<>(16);
+    private ArrayDeque<Program> ProgramQueue = new ArrayDeque<>(16);
 
-    public ArrayDeque<MutablePair<byte[], Peer>> getProgramQueue() {
+    public ArrayDeque<Program> getProgramQueue() {
         return ProgramQueue;
     }
 
-    public boolean addProgramQueue(MutablePair<byte[], Peer> pair) {
-        return ProgramQueue.offer(pair);
+    public boolean addProgramQueue(Program program) {
+        return ProgramQueue.offer(program);
     }
 
-    public void setProgramQueue(ArrayDeque<MutablePair<byte[], Peer>> programQueue) {
+    public void setProgramQueue(ArrayDeque<Program> programQueue) {
         this.ProgramQueue = programQueue;
     }
+
+
 }

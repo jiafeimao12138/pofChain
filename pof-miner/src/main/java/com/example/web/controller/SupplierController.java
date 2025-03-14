@@ -4,7 +4,7 @@ import com.example.base.entities.Message;
 import com.example.base.entities.Node;
 import com.example.base.entities.NodeType;
 import com.example.fuzzed.ProgramService;
-import com.example.supplier.Reward;
+import com.example.base.entities.Reward;
 import com.example.web.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -52,12 +52,12 @@ public class SupplierController {
                           @RequestParam int criticalReward,
                           @RequestParam int newPathReward,
                           @RequestParam int newPathNum) {
-        reward.setRewardValue(Reward.REWARDTYPE.LOW, lowReward);
-        reward.setRewardValue(Reward.REWARDTYPE.MEDIUM, mediumReward);
-        reward.setRewardValue(Reward.REWARDTYPE.HIGH, highReward);
-        reward.setRewardValue(Reward.REWARDTYPE.CRITICAL, criticalReward);
-        reward.setRewardValue(Reward.REWARDTYPE.NEWPATH, newPathReward);
-        reward.setRewardValue(Reward.REWARDTYPE.NPATH_QUOTA, newPathNum);
+        reward.setRewardValue(Reward.RewardType.LOW, lowReward);
+        reward.setRewardValue(Reward.RewardType.MEDIUM, mediumReward);
+        reward.setRewardValue(Reward.RewardType.HIGH, highReward);
+        reward.setRewardValue(Reward.RewardType.CRITICAL, criticalReward);
+        reward.setRewardValue(Reward.RewardType.NEWPATH, newPathReward);
+        reward.setRewardValue(Reward.RewardType.NPATH_QUOTA, newPathNum);
     }
 
     @RequestMapping("testvue")

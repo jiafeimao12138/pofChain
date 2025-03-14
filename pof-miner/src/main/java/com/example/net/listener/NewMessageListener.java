@@ -44,9 +44,10 @@ public class NewMessageListener {
 
     @EventListener(NewTargetProgramEvent.class)
     public void onNewTargetProgram(NewTargetProgramEvent event) {
+        Message message = (Message)event.getSource();
         MessagePacket messagePacket = new MessagePacket();
         messagePacket.setType(MessagePacketType.PUBLISH_FILE);
-        messagePacket.setBody(SerializeUtils.serialize(event.getPair()));
+        messagePacket.setBody(SerializeUtils.serialize(message));
         p2pClient.sendToGroup(messagePacket);
     }
 

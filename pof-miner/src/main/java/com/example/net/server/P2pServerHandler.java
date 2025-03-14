@@ -3,8 +3,10 @@ package com.example.net.server;
 import com.example.base.entities.Node;
 import com.example.base.entities.NodeType;
 import com.example.base.entities.Peer;
+import com.example.base.entities.Program;
 import com.example.base.entities.transaction.Transaction;
 import com.example.base.utils.SerializeUtils;
+import com.example.fuzzed.ProgramService;
 import com.example.net.base.BaseTioHandler;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
@@ -24,13 +26,15 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
     private static final Logger logger = LoggerFactory.getLogger(P2pServerHandler.class);
 
     private final MessageServerHandler serverHandler;
+    private final ProgramService programService;
     private final Node node;
 
     @Value("${fuzzer.targetProgramDir}")
     private String targetProgramQueueDir;
 
-    public P2pServerHandler(MessageServerHandler serverHandler, Node node) {
+    public P2pServerHandler(MessageServerHandler serverHandler, ProgramService programService, Node node) {
         this.serverHandler = serverHandler;
+        this.programService = programService;
         this.node = node;
     }
 
@@ -58,7 +62,6 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 logger.info("处理接收到的新区块");
                 // 根据节点类型选择不同操作
                 NodeType type = node.getType();
-//                String address = node.getAddress();
                 if (type == NodeType.FUZZER) {
                     responsePacket = serverHandler.receiveNewBlock_fuzzer(msgBody);
                 } else if (type == NodeType.OBSERVER){
@@ -82,11 +85,10 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 responsePacket = serverHandler.receiveHeightReq(msgBody);
                 break;
             case MessagePacketType.PUBLISH_FILE:
-                MutablePair<byte[], Peer> nodePair = (MutablePair<byte[], Peer>) SerializeUtils.unSerialize(msgBody);
-                byte[] fileByte = nodePair.getLeft();
-                Peer node = nodePair.getRight();
-                logger.info("收到新待测程序, filesize:{}, node:{}", fileByte.length, node);
-                serverHandler.receiveFile(nodePair, targetProgramQueueDir, "program_");
+                Program program = (Program) SerializeUtils.unSerialize(msgBody);
+                logger.info("收到新待测程序, filesize:{}, node:{}", program.getProgramCode().length, node);
+//                serverHandler.receiveFile(program, targetProgramQueueDir, "program_");
+                programService.receiveProgram(program, targetProgramQueueDir);
                 break;
             case MessagePacketType.NEW_PATH_RANK:
                 // @TODO 实时推送给前端

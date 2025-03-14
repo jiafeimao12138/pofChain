@@ -17,7 +17,6 @@ public class UTXOSet {
     private static ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private static Lock readLock = rwl.readLock();
 
-
     /**
      * 查找钱包地址对应的所有UTXO
      *

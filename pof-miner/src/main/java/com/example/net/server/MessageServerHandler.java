@@ -19,7 +19,7 @@ import com.example.net.events.NewBlockEvent;
 import com.example.net.events.NewPeerEvent;
 import com.example.net.events.NewTransactionEvent;
 import com.example.net.events.TerminateAFLEvent;
-import com.example.supplier.Reward;
+import com.example.base.entities.Reward;
 import com.example.web.service.*;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -163,13 +163,21 @@ public class MessageServerHandler {
         logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
         // 广播给其他peer
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
-        // 发布新路径贡献度排名
+        // 发布上一个区块时间内的新路径贡献度排名
         HashMap<String, List<NewPath>> pathMap = newPathManager.getPaths();
+        // 计算路径有效率
+        int totalPath = newPathManager.getTotalPath();
+        int newPathNum = 0;
+        for (List<NewPath> pathList : pathMap.values()) {
+            newPathNum += pathList.size();
+        }
+        double pathEfficiency = (double) newPathNum / totalPath;
+        logger.info("有效路径率：{}", pathEfficiency);
         Map<String, List<NewPath>> newPathContributionRank = newPathService.NewPathContributionRank(pathMap);
         // 发送新路径奖励
         // TODO: 发送新路径奖励要这样强制么？目前交易费设置为0
         ArrayList<Map.Entry<String, List<NewPath>>> rankList = new ArrayList<>(newPathContributionRank.entrySet());
-        int newPathQuota = reward.getRewardValue(Reward.REWARDTYPE.NPATH_QUOTA);
+        int newPathQuota = reward.getRewardValue(Reward.RewardType.NPATH_QUOTA);
         for (int i = 0; i < Math.min(newPathQuota, rankList.size()); i++) {
             Map.Entry<String, List<NewPath>> entry = rankList.get(i);
             List<NewPath> newPathList = entry.getValue();
@@ -180,6 +188,8 @@ public class MessageServerHandler {
             ApplicationContextProvider.publishEvent(new NewTransactionEvent(rewardTX));
         }
         logger.info("supplier已将本轮新路径奖励全部发放");
+        newPathManager.setTotalPath(0);
+        newPathManager.clearPathMap();
         return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, true), "成功");
     }
 
@@ -223,18 +233,18 @@ public class MessageServerHandler {
         return buildPacket(MessagePacketType.RES_HEIGHT, new PacketBody(height, PacketMsgType.SUCEESS), "成功");
     }
 
-    public synchronized void receiveFile(MutablePair<byte[], Peer> nodePair, String path, String name) {
-        Peer node = nodePair.getRight();
-        logger.info("收到file，长度为{}; 发送方：{}:{}", nodePair.getLeft().length, node.getIp(), node.getPort());
+    public synchronized void receiveFile(Program program, String path, String name) {
+        Peer node = program.getPeer();
+        logger.info("收到file，长度为{}; 发送方：{}:{}", program.getProgramCode().length, node.getIp(), node.getPort());
         // 将node存入数据库
-        if(peerService.addSupplierPeer(nodePair.getRight())){
+        if(peerService.addSupplierPeer(program.getPeer())){
             logger.info("supplier信息存入数据库");
         }
         // 收到program后，放入队列
-        if(programQueue.addProgramQueue(nodePair)){
-            ArrayDeque<MutablePair<byte[], Peer>> queue = programQueue.getProgramQueue();
-            for (MutablePair<byte[], Peer> peerMutablePair : queue) {
-                logger.info("队列中内容：文件长度为{},node为{}",peerMutablePair.getLeft().length,peerMutablePair.getRight());
+        if(programQueue.addProgramQueue(program)){
+            ArrayDeque<Program> queue = programQueue.getProgramQueue();
+            for (Program p : queue) {
+                logger.info("队列中内容：文件长度为{},node为{}",p.getProgramCode().length, p.getPeer());
             }
         }
         logger.info("再获取一次ProgramQueue: {}", programQueue.getProgramQueue());
@@ -277,7 +287,7 @@ public class MessageServerHandler {
 
     // 处理其他节点的ProgramQueue请求
     public synchronized MessagePacket responseProgramQueue() {
-        ArrayDeque<MutablePair<byte[], Peer>> queue = programQueue.getProgramQueue();
+        ArrayDeque<Program> queue = programQueue.getProgramQueue();
         PacketBody packetBody = new PacketBody();
         packetBody.setItem(queue);
         packetBody.setSuccess(true);

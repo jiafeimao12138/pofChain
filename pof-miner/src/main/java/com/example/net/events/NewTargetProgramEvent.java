@@ -1,6 +1,7 @@
 package com.example.net.events;
 
 import com.example.base.entities.Peer;
+import com.example.base.entities.Program;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.context.ApplicationEvent;
@@ -15,6 +16,10 @@ public class NewTargetProgramEvent extends ApplicationEvent {
         this.pair = pair;
         this.peer = pair.getRight();
         this.fileBytes = pair.getLeft();
+    }
+
+    public NewTargetProgramEvent(Program program) {
+        super(program);
     }
 
     public Peer getPeer() {

@@ -121,7 +121,7 @@ public class MiningServiceImpl implements MiningService {
             logger.info("开始进行Fuzzing");
             try {
                 Pair<String, Peer> targetProgram;
-                ArrayDeque<MutablePair<byte[], Peer>> queue = programQueue.getProgramQueue();
+                ArrayDeque<Program> queue = programQueue.getProgramQueue();
                 // 如果不存在program文件夹就生成
                 File directory = new File(targetProgramQueueDir);
                 directory.mkdirs();

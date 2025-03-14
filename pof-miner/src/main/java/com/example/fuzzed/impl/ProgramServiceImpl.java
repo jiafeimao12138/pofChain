@@ -1,7 +1,11 @@
 package com.example.fuzzed.impl;
 
 import com.example.base.entities.Peer;
+import com.example.base.entities.Program;
 import com.example.base.entities.ProgramQueue;
+import com.example.base.entities.Reward;
+import com.example.base.utils.ByteUtils;
+import com.example.base.utils.Sha256Hash;
 import com.example.fuzzed.ProgramService;
 import com.example.net.conf.ApplicationContextProvider;
 import com.example.net.conf.P2pNetConfig;
@@ -12,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.bouncycastle.jcajce.provider.digest.SHA256;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -34,6 +39,7 @@ public class ProgramServiceImpl implements ProgramService {
     private final PeerService peerService;
     // 待测程序队列，队列头为下一次fuzzing的程序
     private final ProgramQueue programQueue;
+    private final Reward reward;
     private final int MAX_REQ = 10;
 
     // supplier 将待测程序转换为目标可执行文件
@@ -52,12 +58,14 @@ public class ProgramServiceImpl implements ProgramService {
             File file = new File(objPath);
             // 读取文件的字节
             byte[] fileBytes = Files.readAllBytes(file.toPath());
-            // 广播该目标可执行文件和ip
-            MutablePair<byte[], Peer> pair = new MutablePair<>(fileBytes,
-                    new Peer(p2pNetConfig.getServerAddress(), p2pNetConfig.getServerPort()));
-            ApplicationContextProvider.publishEvent(new NewTargetProgramEvent(pair));
-            programQueue.addProgramQueue(pair);
-            logger.info("已广播待测可执行文件：{}, 长度:{}, Node:{}", file.getName(), fileBytes.length, pair.getRight());
+            // 广播program
+            if (reward == null)
+                return false;
+            Program program = new Program(ByteUtils.bytesToHex(Sha256Hash.hash(fileBytes)), fileBytes,
+                    new Peer(p2pNetConfig.getServerAddress(), p2pNetConfig.getServerPort()), reward);
+            ApplicationContextProvider.publishEvent(new NewTargetProgramEvent(program));
+            programQueue.addProgramQueue(program);
+            logger.info("已广播待测可执行文件：{}, 长度:{}, Node:{}", file.getName(), fileBytes.length, program.getPeer());
         } catch (IOException e) {
             throw new RuntimeException(e);
         } catch (InterruptedException e) {
@@ -69,7 +77,7 @@ public class ProgramServiceImpl implements ProgramService {
     // fuzzer 将接收到的byte[]转换为file，准备fuzz
     @Override
     public String byteToFile(byte[] fileBytes, String path, String name) {
-        String absolutePath = path + "/" + name + System.currentTimeMillis();
+        String absolutePath = path + "/" + name;
         File file = new File(absolutePath);
         try {
             file.createNewFile();
@@ -90,18 +98,44 @@ public class ProgramServiceImpl implements ProgramService {
     }
 
     @Override
-    public Pair<String, Peer> chooseTargetProgram(String directorypath, ArrayDeque<MutablePair<byte[], Peer>> queue) {
+    public boolean receiveProgram(Program program, String directorypath) {
+        Peer node = program.getPeer();
+        logger.info("收到file，长度为{}; 发送方：{}:{}", program.getProgramCode().length, node.getIp(), node.getPort());
+        // 将node存入数据库
+        if(!peerService.addSupplierPeer(program.getPeer())){
+
+            logger.info("supplier信息存入数据库");
+            return false;
+        }
+        // 存入本地
+        String fileName = "Program_" + program.getHash().substring(0,5);
+        byteToFile(program.getProgramCode(), directorypath, fileName);
+        program.setProgramCode(null);
+        // 收到program后，放入队列
+        if(programQueue.addProgramQueue(program)){
+            ArrayDeque<Program> queue = programQueue.getProgramQueue();
+            for (Program p : queue) {
+                logger.info("队列中内容：文件长度为{},node为{}",p.getProgramCode().length, p.getPeer());
+            }
+        }
+        logger.info("再获取一次ProgramQueue: {}", programQueue.getProgramQueue());
+
+        return true;
+    }
+
+    @Override
+    public Pair<String, Peer> chooseTargetProgram(String directorypath, ArrayDeque<Program> queue) {
         if (queue.isEmpty()) {
             return null;
         }
         // 选择队列头并弹出
-        MutablePair<byte[], Peer> pair = queue.pop();
-        byte[] fileBytes = pair.getLeft();
-        Peer node = pair.getRight();
+        Program program = queue.pop();
+        byte[] fileBytes = program.getProgramCode();
+        Peer node = program.getPeer();
         if (!peerService.addSupplierPeer(node)) {
             logger.info("更新supplier失败");
         }
-        String fileName = "Program_";
+        String fileName = "Program_" + program.getHash().substring(0,5);
         // 返回待测程序的路径
         String path = byteToFile(fileBytes, directorypath, fileName);
         Pair<String, Peer> programInfo = new ImmutablePair<>(path, node);

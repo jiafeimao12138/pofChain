@@ -23,6 +23,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 
 // 启动 p2pClient
 @Component
@@ -34,6 +35,8 @@ public class P2pClient {
     private final P2pNetConfig p2pNetConfig;
     private List<ClientChannelContext> channelContextList;
     private final List<Peer> peerList;
+    private static final CountDownLatch latch = new CountDownLatch(1);
+
 
 
     public P2pClient(P2pNetConfig p2pNetConfig,
@@ -59,9 +62,16 @@ public class P2pClient {
     @PostConstruct
     public void start() throws Exception{
         this.tioClient = new TioClient(tioClientConfig);
-        //连接创世节点
-        // TODO：如果连接创世节点失败了，尝试连接其他节点。或者给出一个列表什么的用来连接，参考下别的区块连是怎么做的
-        connect(new Node(p2pNetConfig.getGenesisAddress(), p2pNetConfig.getGenesisPort()));
+        logger.info("P2pClient start()");
+        // 资格检验
+        if(checkIfSupportSGX())
+            connect(new Node(p2pNetConfig.getGenesisAddress(), p2pNetConfig.getGenesisPort()));
+        else
+            logger.error("不支持intel sgx");
+    }
+
+    public boolean checkIfSupportSGX() {
+        return true;
     }
 
     // 发送给组
@@ -77,6 +87,8 @@ public class P2pClient {
     }
 
 
+
+
     // 连接新节点
     public ClientChannelContext connect(Node node) throws Exception
     {
@@ -90,6 +102,7 @@ public class P2pClient {
             return null;
         }
         P2pNetConfig.SERVERS.put(node, true);
+        logger.info("开始连接节点{}:{}", node.getIp(), node.getPort());
         ClientChannelContext channelContext = tioClient.connect(node);
         Thread.sleep(5000);
         logger.info("clientChannelContext:{}", channelContext);
