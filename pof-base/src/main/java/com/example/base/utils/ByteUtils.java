@@ -44,6 +44,9 @@ public class ByteUtils {
      * @return
      */
     public static byte[] merge(byte[]... bytes) {
+        if (bytes == null) {
+            throw new IllegalArgumentException("merge 传入 null");
+        }
         Stream<Byte> stream = Stream.of();
         for (byte[] b: bytes) {
             stream = Stream.concat(stream, Arrays.stream(ArrayUtils.toObject(b)));

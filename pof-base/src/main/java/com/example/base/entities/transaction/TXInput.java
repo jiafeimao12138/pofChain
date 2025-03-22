@@ -1,5 +1,7 @@
 package com.example.base.entities.transaction;
 
+import com.example.base.utils.ByteUtils;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,6 +19,7 @@ import java.util.Arrays;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+//@JsonInclude(JsonInclude.Include.NON_NULL)
 public class TXInput {
 
     /**
@@ -33,10 +36,10 @@ public class TXInput {
      * 私钥签名+公钥组成ScriptSig，用于解锁该UTXO使得可以消费这笔钱
      */
 
-    private byte[] scriptSig = null;
+    private byte[] scriptSig;
 
     public TXInput(byte[] previousTXId) {
-        this.previousTXId = previousTXId;
+        this.scriptSig = previousTXId;
     }
 
     /**
@@ -54,7 +57,7 @@ public class TXInput {
      * @return
      */
     public static TXInput coinbaseInput(byte[] coinBaseData) {
-        return new TXInput(coinBaseData);
+        return new TXInput(new byte[8], 0, coinBaseData);
     }
 
 
@@ -86,6 +89,8 @@ public class TXInput {
      * @return
      */
     public byte[] getSig() {
+        if (this.scriptSig.length == 8)
+            return new byte[8];
         ByteBuffer buffer = ByteBuffer.wrap(this.scriptSig);
         // 读取第一组数据
         int length1 = buffer.getInt(); // 读取长度
@@ -100,6 +105,9 @@ public class TXInput {
      * @return
      */
     public byte[] getPubKey() {
+        if (this.scriptSig.length == 8) {
+            return new byte[8];
+        }
         ByteBuffer buffer = ByteBuffer.wrap(this.scriptSig);
         int length1 = buffer.getInt(); // 读取长度
         byte[] retrievedData1 = new byte[length1];

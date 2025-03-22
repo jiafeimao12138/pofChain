@@ -36,7 +36,6 @@
 #include <assert.h>
 #include <time.h>
 #include <signal.h>
-#include <jni.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 
@@ -251,10 +250,11 @@ int ocall_get_fuzz_worker_pid(int target_pid, int* fuzz_worker_pid) {
 void ocall_pause_fuzzing(int target_pid, int forkserver_pid) {
     if (target_pid > 0) {
         kill(target_pid, SIGSTOP);
-//        printf("暂停 Fuzzing 进程: %d\n", target_pid);
+        kill(forkserver_pid, SIGSTOP);
+        printf("暂停 Fuzzing 进程: %d，forkserver进程：%d\n", target_pid, forkserver_pid);
     } else {
         kill(forkserver_pid, SIGSTOP);
-//        printf("暂停 forkserver 进程: %d\n", forkserver_pid);
+        printf("暂停 forkserver 进程: %d\n", forkserver_pid);
     }
 }
 
@@ -262,10 +262,11 @@ void ocall_pause_fuzzing(int target_pid, int forkserver_pid) {
 void ocall_resume_fuzzing(int pid, int forkserver_pid) {
     if (pid > 0) {
         kill(pid, SIGCONT);
-        printf("恢复 Fuzzing 进程: %d\n", pid);
+        kill(forkserver_pid, SIGCONT);
+        printf("恢复 Fuzzing 进程: %d, forkserver进程：%d\n", pid, forkserver_pid);
     } else {
         kill(forkserver_pid, SIGCONT);
-        printf("恢复 forkserver 进程: %d\n", pid);
+        printf("恢复 forkserver 进程: %d\n", forkserver_pid);
     }
 }
 
@@ -296,22 +297,22 @@ int ocall_check_afl() {
     return found;
 }
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_net_conf_EnclaveInterface_callEnclave(JNIEnv *env, jobject obj, jstring input) {
-    const char *nativeInput = env->GetStringUTFChars(input, 0);
-    char output[256] = {0};
-    char* modifiedInput = strdup(nativeInput);
+// extern "C" JNIEXPORT jstring JNICALL
+// Java_com_example_net_conf_EnclaveInterface_callEnclave(JNIEnv *env, jobject obj, jstring input) {
+//     const char *nativeInput = env->GetStringUTFChars(input, 0);
+//     char output[256] = {0};
+//     char* modifiedInput = strdup(nativeInput);
 
-    // 调用 Enclave 里的 ecall 方法
-    sgx_status_t status = ecall_process_data(global_eid);
-    env->ReleaseStringUTFChars(input, nativeInput);
+//     // 调用 Enclave 里的 ecall 方法
+//     sgx_status_t status = ecall_process_data(global_eid);
+//     env->ReleaseStringUTFChars(input, nativeInput);
 
-    if (status != SGX_SUCCESS) {
-        return env->NewStringUTF("Enclave Error");
-    }
-    free(input);
-    return env->NewStringUTF(output);
-}
+//     if (status != SGX_SUCCESS) {
+//         return env->NewStringUTF("Enclave Error");
+//     }
+//     free(input);
+//     return env->NewStringUTF(output);
+// }
 
 void ocall_notify_java() {
     // 写入信号文件，通知 Java 开始执行
@@ -338,7 +339,7 @@ int ocall_check_java(int* isEqual) {
             buffer[strcspn(buffer, "\n")] = 0;
             // 检查内容是否为 "resume"
             if (strcmp(buffer, "resume") == 0) {
-                printf("equal\n");
+                printf("equal, resume\n");
                 *isEqual = 1;
                 fclose(file);
                 return 1; // 内容匹配

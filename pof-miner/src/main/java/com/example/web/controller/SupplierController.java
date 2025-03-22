@@ -33,13 +33,13 @@ public class SupplierController {
     }
 
     @RequestMapping("/publishFile")
-    public void publishFile() {
+    public void publishFile(@RequestParam String name, @RequestParam String desc) {
         node.setType(NodeType.SUPPLIER);
         logger.info("node:{}", node);
         // @TODO：supplier上传源代码
-        programService.prepareTargetProgram("supplierfiles/string_length.c",
-                "supplierfiles/string_length_publish");
-
+//        programService.prepareTargetProgram("supplierfiles/string_length.c",
+//                "supplierfiles/string_length_publish", name, desc);
+        programService.uploadTask("supplierfiles/potrace.b64", "../programQueue/potrace/src/potrace", name, desc);
     }
 
     /**
@@ -50,14 +50,13 @@ public class SupplierController {
                           @RequestParam int mediumReward,
                           @RequestParam int highReward,
                           @RequestParam int criticalReward,
-                          @RequestParam int newPathReward,
-                          @RequestParam int newPathNum) {
+                          @RequestParam int newPathReward
+                          ) {
         reward.setRewardValue(Reward.RewardType.LOW, lowReward);
         reward.setRewardValue(Reward.RewardType.MEDIUM, mediumReward);
         reward.setRewardValue(Reward.RewardType.HIGH, highReward);
         reward.setRewardValue(Reward.RewardType.CRITICAL, criticalReward);
         reward.setRewardValue(Reward.RewardType.NEWPATH, newPathReward);
-        reward.setRewardValue(Reward.RewardType.NPATH_QUOTA, newPathNum);
     }
 
     @RequestMapping("testvue")

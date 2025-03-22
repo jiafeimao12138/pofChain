@@ -101,10 +101,10 @@ void start_fuzzing_timer() {
              ocall_pause_fuzzing(fuzz_worker_pid, target_pid);  // 暂停 fuzz_worker
              // 通知java程序计算hash
              ocall_notify_java();
-             // 写入共享内存，通知 Java 开始执行
-//             ocall_write_shm();
              // 监控共享内存
              ocall_check_java(0, &isEqual);
+             // 共享内存可存hash值，说明挖矿成功，则签名,签名完写入共享文件，立即恢复afl
+
              if(isEqual) {
                 printf("继续afl\n");
                 ocall_resume_fuzzing(fuzz_worker_pid, target_pid);

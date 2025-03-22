@@ -25,6 +25,7 @@ public class Block implements Serializable {
     public final static int BLOCK_MAX_SIZE = 1 * 1024 * 1024;
 
 //    header
+    private String blockHash;
     private BlockHeader blockHeader;
     private List<Transaction> transactions = new ArrayList<>();
     private List<Payload> payloads = new ArrayList<>();
@@ -36,8 +37,9 @@ public class Block implements Serializable {
                  List<Transaction> transactions,
                  List<Payload> payloads
                  ) {
-        blockHeader.setHashMerkleRoot(ByteUtils.bytesToHex(calculateMerkleRoot(transactions)));
+
         this.blockHeader = blockHeader;
+        this.blockHeader.setHashMerkleRoot(ByteUtils.bytesToHex(calculateMerkleRoot(transactions)));
         this.transactions = transactions;
         this.payloads = payloads;
     }
@@ -64,17 +66,14 @@ public class Block implements Serializable {
         if (this == o) return true;
         if (!(o instanceof Block)) return false;
         Block block = (Block) o;
-        return Objects.equals(blockHeader, block.blockHeader) && Objects.equals(transactions, block.transactions) && Objects.equals(payloads, block.payloads);
+        return Objects.equals(blockHash, block.blockHash) && Objects.equals(blockHeader, block.blockHeader) && Objects.equals(transactions, block.transactions) && Objects.equals(payloads, block.payloads);
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(blockHeader, transactions, payloads);
-    }
 
     @Override
     public String toString() {
         return "Block{" +
+                "blockHash=" + blockHash.toString() +
                 "blockHeader=" + blockHeader.toString() +
                 ", transactions=" + transactions.toString() +
                 ", payloads=" + payloads +

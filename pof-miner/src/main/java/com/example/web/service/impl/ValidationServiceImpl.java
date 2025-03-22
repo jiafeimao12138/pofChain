@@ -70,7 +70,7 @@ public class ValidationServiceImpl implements ValidationService {
                 return false;
             }
             // 前一个区块存在，校验preHash是否等于新hash
-            if (!StringUtils.equals(preHash, preBlock.getHash())) {
+            if (!StringUtils.equals(preHash, preBlock.getBlockHash())) {
                 return false;
             }
         }
@@ -98,7 +98,7 @@ public class ValidationServiceImpl implements ValidationService {
             if (!dbStore.put(BlockPrefix.BLOCK_HEIGHT_PREFIX.getPrefix() + block.getBlockHeader().getHeight(), block)){
                 return false;
             }
-            if (!dbStore.put(BlockPrefix.BLOCK_HASH_PREFIX.getPrefix() + block.getHash(), block)){
+            if (!dbStore.put(BlockPrefix.BLOCK_HASH_PREFIX.getPrefix() + block.getBlockHash(), block)){
                 return false;
             }
             if (!dbStore.put(BlockPrefix.HEIGHT.getPrefix(), block.getBlockHeader().getHeight())) {

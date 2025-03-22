@@ -2,6 +2,7 @@ package com.example.net.listener;
 
 import com.example.base.entities.Message;
 import com.example.base.entities.NewPath;
+import com.example.base.entities.Program;
 import com.example.base.utils.SerializeUtils;
 import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
@@ -44,7 +45,7 @@ public class NewMessageListener {
 
     @EventListener(NewTargetProgramEvent.class)
     public void onNewTargetProgram(NewTargetProgramEvent event) {
-        Message message = (Message)event.getSource();
+        Program message = (Program)event.getSource();
         MessagePacket messagePacket = new MessagePacket();
         messagePacket.setType(MessagePacketType.PUBLISH_FILE);
         messagePacket.setBody(SerializeUtils.serialize(message));

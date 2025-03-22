@@ -18,6 +18,7 @@ import org.tio.client.ClientChannelContext;
 import org.tio.core.Tio;
 
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @RestController
 @RequestMapping("/test")
@@ -44,11 +45,11 @@ public class TestController {
 
     @RequestMapping("/getProgramQueue")
     public void getProgramQueue() {
-        ArrayDeque<MutablePair<byte[], Peer>> queue = programQueue.getProgramQueue();
+        CopyOnWriteArrayList<Program> queue = programQueue.getProgramList();
         if (queue.isEmpty())
             System.out.println("[]");
-        for (MutablePair<byte[], Peer> pair : queue) {
-            System.out.println(pair.getLeft().length + ";" + pair.getRight());
+        for (Program program : queue) {
+            System.out.println(program.getProgramCode().length);
         }
     }
 

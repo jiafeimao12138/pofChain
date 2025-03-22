@@ -2,6 +2,9 @@ package com.example;
 
 import com.example.base.entities.block.Block;
 import com.example.base.entities.block.BlockHeader;
+import com.example.base.entities.transaction.TXInput;
+import com.example.base.entities.transaction.TXOutput;
+import com.example.base.entities.transaction.Transaction;
 import com.example.base.store.BlockPrefix;
 import com.example.base.store.RocksDBStore;
 import com.example.base.utils.CmdArgsParser;
@@ -14,6 +17,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -97,15 +101,34 @@ public class PofRunner {
         genesisBlockHeader.setHeight(0l);
         genesisBlockHeader.setNTime(1732436151);
         genesisBlock.setBlockHeader(genesisBlockHeader);
-        genesisBlock.setTransactions(new ArrayList<>());
+        Transaction transaction = newCoinbaseTX("000000", 0, Transaction.BLOCK_REWARD);
+        ArrayList<Transaction> transactions = new ArrayList<>();
+        transactions.add(transaction);
+        genesisBlock.setTransactions(transactions);
+        genesisBlock.setBlockHash(genesisBlock.getHash());
 
         dbStore.put(BlockPrefix.BLOCK_HEIGHT_PREFIX.getPrefix() + genesisBlock.getBlockHeader().getHeight(), genesisBlock);
         dbStore.put(BlockPrefix.HEIGHT.getPrefix(), genesisBlock.getBlockHeader().getHeight());
-        dbStore.put(BlockPrefix.BLOCK_HASH_PREFIX.getPrefix() + genesisBlock.getHash(), genesisBlock);
+        dbStore.put(BlockPrefix.BLOCK_HASH_PREFIX.getPrefix() + genesisBlock.getBlockHash(), genesisBlock);
         dbStore.close();
 
-        logger.info("创世区块创建成功，Hash：{}.", genesisBlock.getHash());
+        logger.info("创世区块创建成功，Hash：{}.", genesisBlock.getBlockHash());
         return genesisBlock;
+    }
+
+    public Transaction newCoinbaseTX(String toAddress, long blockHeight, int blockReward) {
+        Transaction coinBaseTX = new Transaction();
+        // 创建交易输入
+        byte[] coinBaseData = ByteBuffer.allocate(8).putLong(blockHeight).array();
+        TXInput txInput = TXInput.coinbaseInput(coinBaseData);
+        coinBaseTX.addInput(txInput);
+
+        // 创建交易输出
+        TXOutput txOutput = TXOutput.newTXOutput(blockReward, toAddress);
+        coinBaseTX.addOutput(txOutput);
+        coinBaseTX.setCreateTime(1742660358l);
+        logger.info("coinBaseTX长度: {}", coinBaseTX.getInputs().get(0).getPreviousTXId().length);
+        return coinBaseTX;
     }
 
     // 生成配置文件

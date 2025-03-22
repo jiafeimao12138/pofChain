@@ -1,5 +1,6 @@
 package com.example.net.client;
 
+import com.example.base.entities.Program;
 import com.example.base.entities.block.Block;
 import com.example.base.entities.Peer;
 import com.example.base.entities.ProgramQueue;
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayDeque;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 // 处理其他 node 发送的response
 @Component
@@ -38,7 +40,7 @@ public class MessageClientHandler {
         }
         //先判断接收到的区块是否已经在本地区块链中存在
         Block block = (Block) packetBody.getItem();
-        if (chainService.getBlockByHash(block.getHash()) != null) {
+        if (chainService.getBlockByHash(block.getBlockHash()) != null) {
             //说明本地区块链中已经存在该区块了, 那就直接请求下一个区块
             ApplicationContextProvider.publishEvent(new GetBlockByHeightEvent(block.getBlockHeader().getHeight() + 1));
             return;
@@ -83,9 +85,9 @@ public class MessageClientHandler {
 
     public void receiveProgramQueue(byte[] body) {
         PacketBody packetBody = (PacketBody) SerializeUtils.unSerialize(body);
-        ArrayDeque<MutablePair<byte[], Peer>> queue =
-                (ArrayDeque<MutablePair<byte[], Peer>>) packetBody.getItem();
-        programQueue.setProgramQueue(queue);
+        CopyOnWriteArrayList<Program> queue =
+                (CopyOnWriteArrayList<Program>) packetBody.getItem();
+        programQueue.setProgramList(queue);
     }
 
 }

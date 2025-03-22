@@ -34,6 +34,8 @@ public class TXOutput {
      * @return
      */
     public static TXOutput newTXOutput(int value, String address) {
+        if (address == "000000")
+            return new TXOutput(value, new byte[0]);
         // 反向转化为 byte 数组
         byte[] versionedPayload = Base58Check.base58ToBytes(address);
         byte[] pubKeyHash = Arrays.copyOfRange(versionedPayload, 1, versionedPayload.length);

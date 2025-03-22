@@ -1,5 +1,7 @@
 package com.example.base.entities;
 
+import org.apache.commons.lang3.mutable.Mutable;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -9,7 +11,9 @@ import java.util.List;
 @Component
 public class NewPathManager {
     private HashMap<String, List<NewPath>> paths = new HashMap<>();
-    private int totalPath;
+    private HashMap<String, MutablePair<Long, Long>> programPathInfo = new HashMap<>();
+    private long totalPathNum;
+    private long newPathNum;
 
     public boolean addPathHashMap(String address, List<NewPath> paths) {
         if (this.paths.containsKey(address)) {
@@ -17,6 +21,17 @@ public class NewPathManager {
         }
         this.paths.put(address, paths);
         return true;
+    }
+
+    public void updateProgramPathInfo(String programHash, long newPathNum, long totalPathNum) {
+        MutablePair<Long, Long> pair = programPathInfo.get(programHash);
+        if (pair == null) {
+            programPathInfo.put(programHash, new MutablePair<>(newPathNum, totalPathNum));
+        } else {
+            pair.setLeft(pair.getLeft() + newPathNum);
+            pair.setRight(pair.getRight() + totalPathNum);
+            programPathInfo.put(programHash, pair);
+        }
     }
 
     public void clearPathMap() {
@@ -27,12 +42,12 @@ public class NewPathManager {
         return paths;
     }
 
-    public int getTotalPath() {
-        return this.totalPath;
+    public long getTotalPath() {
+        return this.totalPathNum;
     }
 
-    public void setTotalPath(int num) {
-        this.totalPath = num;
+    public void setTotalPath(long num) {
+        this.totalPathNum = num;
     }
 
 }

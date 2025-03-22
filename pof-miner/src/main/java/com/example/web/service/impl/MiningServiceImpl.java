@@ -121,7 +121,7 @@ public class MiningServiceImpl implements MiningService {
             logger.info("开始进行Fuzzing");
             try {
                 Pair<String, Peer> targetProgram;
-                ArrayDeque<Program> queue = programQueue.getProgramQueue();
+                CopyOnWriteArrayList<Program> queue = programQueue.getProgramList();
                 // 如果不存在program文件夹就生成
                 File directory = new File(targetProgramQueueDir);
                 directory.mkdirs();
@@ -183,12 +183,12 @@ public class MiningServiceImpl implements MiningService {
                 // 启动进程
                 Process process = processBuilder.start();
                 // 读取输出
-//                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-//                    String line;
-//                    while ((line = reader.readLine()) != null) {
-//                        System.out.println(line);
-//                    }
-//                }
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        System.out.println(line);
+                    }
+                }
                 // 等待进程结束并获取退出状态
                 process.waitFor();
             } catch (IOException | InterruptedException e) {
@@ -203,7 +203,9 @@ public class MiningServiceImpl implements MiningService {
 //        指定工作目录，必须是AFL，否则会段错误
         processBuilder.directory(new java.io.File(aflDirectory));
         String fuzzOutDir = fuzzOut + node1.getAddress().substring(0,6);
-        processBuilder.command("afl-fuzz", "-i", fuzzIn , "-o", fuzzOutDir , targetProgram);
+        String in = "../programQueue/potrace/testcase";
+//        processBuilder.command("afl-fuzz", "-i", fuzzIn , "-o", fuzzOutDir , targetProgram);
+        processBuilder.command("afl-fuzz", "-i", in , "-o", fuzzOutDir , targetProgram);
         try {
             Process process = processBuilder.start();
             // 等待命令执行完毕
@@ -328,7 +330,7 @@ public class MiningServiceImpl implements MiningService {
 //            logger.info("本次清理完毕, 范围是{}到{}", fileNum - 20, fileNum - 1);
 //        }
         Block preBlock = chainService.getLocalLatestBlock();
-        logger.info("本次计算区块hash的preBlock：高度为{}, Hash为{}", preBlock.getBlockHeader().getHeight(), preBlock.getHash());
+        logger.info("本次计算区块hash的preBlock：高度为{}, Hash为{}", preBlock.getBlockHeader().getHeight(), preBlock.getBlockHash());
 
         // 从mempool中选择transactions
         List<Transaction> transactions = chooseTransactions();
@@ -340,8 +342,8 @@ public class MiningServiceImpl implements MiningService {
             transactions.set(0, coinbaseTX);
         }
         Block newBlock = computeWindowHash(preBlock, transactions, triples);
-        String newHash = newBlock.getHash();
-        logger.info("比较一下：newHash={}, newBlock.getHash={}", newHash, newBlock.getHash());
+        String newHash = newBlock.getBlockHash();
+//        logger.info("比较一下：newHash={}, newBlock.getHash={}", newHash, newBlock.getHash());
         logger.info("新区块中的payload长度为：{}", newBlock.getPayloads().size());
         // 当命中区间
         if(isInInterval(newHash, head, end)) {
@@ -361,6 +363,7 @@ public class MiningServiceImpl implements MiningService {
         // 清空文件内容
         Files.newBufferedWriter(testcaseFile).close();
         Files.newBufferedWriter(pathFile).close();
+        logger.info("已清空窗口文件");
     }
 
     public Block computeWindowHash(Block preBlock, List<Transaction> transactionList, List<Payload> payloads){
@@ -369,17 +372,15 @@ public class MiningServiceImpl implements MiningService {
         long timestamp = System.currentTimeMillis();
         long height = preBlock.getBlockHeader().getHeight() + 1;
 
-        Block newBlock = new Block();
+
         BlockHeader blockHeader = new BlockHeader();
-        blockHeader.setHashPreBlock(preBlock.getHash());
+        blockHeader.setHashPreBlock(preBlock.getBlockHash());
         blockHeader.setNTime(timestamp);
         blockHeader.setNNonce(nonce);
         blockHeader.setHeight(height);
-        blockHeader.setHashMerkleRoot("");
 
-        newBlock.setBlockHeader(blockHeader);
-        newBlock.setTransactions(transactionList);
-        newBlock.setPayloads(payloads);
+        Block newBlock = new Block(blockHeader, transactionList, payloads);
+        newBlock.setBlockHash(newBlock.getHash());
         return newBlock;
     }
 
@@ -401,7 +402,7 @@ public class MiningServiceImpl implements MiningService {
         // 广播新区块
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
 
-        logger.info("广播新Block:{}", newBlock.toString());
+        logger.info("广播新Block:{}", newBlock.getBlockHash());
         endWindow = System.currentTimeMillis();
         logger.info("endWindow: {}", endWindow);
         long time = endWindow - lastWindowEnd;

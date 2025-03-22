@@ -88,7 +88,7 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 Program program = (Program) SerializeUtils.unSerialize(msgBody);
                 logger.info("收到新待测程序, filesize:{}, node:{}", program.getProgramCode().length, node);
 //                serverHandler.receiveFile(program, targetProgramQueueDir, "program_");
-                programService.receiveProgram(program, targetProgramQueueDir);
+                programService.receiveTask(program, targetProgramQueueDir);
                 break;
             case MessagePacketType.NEW_PATH_RANK:
                 // @TODO 实时推送给前端

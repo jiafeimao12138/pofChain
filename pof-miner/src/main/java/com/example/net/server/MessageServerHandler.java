@@ -30,6 +30,8 @@ import org.tio.client.ClientChannelContext;
 import org.tio.core.Node;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -81,17 +83,17 @@ public class MessageServerHandler {
     public synchronized MessagePacket receiveNewBlock_fuzzer(byte[] msgBody) throws TransactionNotExistException {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
         // 先检查该区块是否本地已存在
-        if (chainService.getBlockByHash(newBlock.getHash()) != null) {
+        if (chainService.getBlockByHash(newBlock.getBlockHash()) != null) {
             logger.info("该高度已有区块");
             return null;
         }
         if (!validationService.processNewMinedBlock(newBlock)) {
-            logger.info("校验新区块失败, hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
+            logger.info("校验新区块失败, hash={}, height={}", newBlock.getBlockHash(), newBlock.getBlockHeader().getHeight());
             return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, false), "校验新区块失败");
         }
         // 移除已打包的交易
         validationService.removeTransactions(newBlock);
-        logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
+        logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getBlockHash(), newBlock.getBlockHeader().getHeight());
         // 广播给其他peer
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
         // 存储新区块后，需要汇报该Fuzzer自己本轮挖掘出的path信息,并附上新区块
@@ -129,17 +131,17 @@ public class MessageServerHandler {
     public synchronized MessagePacket receiveNewBlock_observer(byte[] msgBody) throws TransactionNotExistException {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
         // 先检查该区块是否本地已存在
-        if (chainService.getBlockByHash(newBlock.getHash()) != null) {
+        if (chainService.getBlockByHash(newBlock.getBlockHash()) != null) {
             logger.info("该高度已有区块");
             return null;
         }
         if (!validationService.processNewMinedBlock(newBlock)) {
-            logger.info("校验新区块失败, hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
+            logger.info("校验新区块失败, hash={}, height={}", newBlock.getBlockHash(), newBlock.getBlockHeader().getHeight());
             return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, false), "校验新区块失败");
         }
         // 移除已打包的交易
         validationService.removeTransactions(newBlock);
-        logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
+        logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getBlockHash(), newBlock.getBlockHeader().getHeight());
         // 广播给其他peer
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
         return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, true), "成功");
@@ -148,48 +150,50 @@ public class MessageServerHandler {
     // supplier处理接收到的新节点, 如果成功添加新区块，则发布新路径贡献排名
     public synchronized MessagePacket receiveNewBlock_supplier(byte[] msgBody) throws Exception {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
-        logger.info("supplier接收到的newblock: {}", newBlock.toString());
+        logger.info("supplier接收到的newblock: {}", newBlock.getBlockHash());
         // 先检查该区块是否本地已存在
-        if (chainService.getBlockByHash(newBlock.getHash()) != null) {
+        if (chainService.getBlockByHash(newBlock.getBlockHash()) != null) {
             logger.info("该高度已有区块");
             return null;
         }
         if (!validationService.processNewMinedBlock(newBlock)) {
-            logger.info("校验新区块失败, hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
+            logger.info("校验新区块失败, hash={}, height={}", newBlock.getBlockHash(), newBlock.getBlockHeader().getHeight());
             return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, false), "校验新区块失败");
         }
         // 移除已打包的交易
         validationService.removeTransactions(newBlock);
-        logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getHash(), newBlock.getBlockHeader().getHeight());
+        logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getBlockHash(), newBlock.getBlockHeader().getHeight());
+        logger.info("新区块：{}", newBlock);
         // 广播给其他peer
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
-        // 发布上一个区块时间内的新路径贡献度排名
+        // 计算上一个区块时间内的新路径贡献度排名
         HashMap<String, List<NewPath>> pathMap = newPathManager.getPaths();
+        Map<String, List<NewPath>> newPathContributionRank = newPathService.NewPathContributionRank(pathMap);
         // 计算路径有效率
-        int totalPath = newPathManager.getTotalPath();
+        long totalPath = newPathManager.getTotalPath();
         int newPathNum = 0;
         for (List<NewPath> pathList : pathMap.values()) {
             newPathNum += pathList.size();
         }
         double pathEfficiency = (double) newPathNum / totalPath;
+        logger.info("newPathNum: {}, totalPath: {}", newPathNum, totalPath);
         logger.info("有效路径率：{}", pathEfficiency);
-        Map<String, List<NewPath>> newPathContributionRank = newPathService.NewPathContributionRank(pathMap);
+
         // 发送新路径奖励
-        // TODO: 发送新路径奖励要这样强制么？目前交易费设置为0
-        ArrayList<Map.Entry<String, List<NewPath>>> rankList = new ArrayList<>(newPathContributionRank.entrySet());
-        int newPathQuota = reward.getRewardValue(Reward.RewardType.NPATH_QUOTA);
-        for (int i = 0; i < Math.min(newPathQuota, rankList.size()); i++) {
-            Map.Entry<String, List<NewPath>> entry = rankList.get(i);
-            List<NewPath> newPathList = entry.getValue();
-            String address = entry.getKey();
-            int rewardValue = newPathList.size() * Transaction.NEW_PATH_REWARD;
-            Transaction rewardTX = transactionService.createFuzzingRewardTransaction(walletService.getWalletAddress(0), address, rewardValue);
-            // 广播
-            ApplicationContextProvider.publishEvent(new NewTransactionEvent(rewardTX));
-        }
-        logger.info("supplier已将本轮新路径奖励全部发放");
-        newPathManager.setTotalPath(0);
-        newPathManager.clearPathMap();
+        // TODO: 所有新路径一起接收，等到最后再人工发奖励
+//        ArrayList<Map.Entry<String, List<NewPath>>> rankList = new ArrayList<>(newPathContributionRank.entrySet());
+//        for (int i = 0; i < rankList.size(); i++) {
+//            Map.Entry<String, List<NewPath>> entry = rankList.get(i);
+//            List<NewPath> newPathList = entry.getValue();
+//            String address = entry.getKey();
+//            int rewardValue = newPathList.size() * Transaction.NEW_PATH_REWARD;
+//            Transaction rewardTX = transactionService.createFuzzingRewardTransaction(walletService.getWalletAddress(0), address, rewardValue);
+//            // 广播
+//            ApplicationContextProvider.publishEvent(new NewTransactionEvent(rewardTX));
+//        }
+//        logger.info("supplier已将本轮新路径奖励全部发放");
+//        newPathManager.setTotalPath(0);
+//        newPathManager.clearPathMap();
         return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, true), "成功");
     }
 
@@ -202,7 +206,7 @@ public class MessageServerHandler {
 
     public synchronized MessagePacket receiveGetBlocksReq(byte[] msgBody) {
         Block block = (Block) SerializeUtils.unSerialize(msgBody);
-        if( chainService.getBlockByHash(block.getHash()) != null ){
+        if( chainService.getBlockByHash(block.getBlockHash()) != null ){
 
         }
         return buildPacket(MessagePacketType.RES_BLOCKS, new PacketBody(), "不存在该区块");
@@ -233,6 +237,7 @@ public class MessageServerHandler {
         return buildPacket(MessagePacketType.RES_HEIGHT, new PacketBody(height, PacketMsgType.SUCEESS), "成功");
     }
 
+    @Deprecated
     public synchronized void receiveFile(Program program, String path, String name) {
         Peer node = program.getPeer();
         logger.info("收到file，长度为{}; 发送方：{}:{}", program.getProgramCode().length, node.getIp(), node.getPort());
@@ -241,13 +246,15 @@ public class MessageServerHandler {
             logger.info("supplier信息存入数据库");
         }
         // 收到program后，放入队列
-        if(programQueue.addProgramQueue(program)){
-            ArrayDeque<Program> queue = programQueue.getProgramQueue();
-            for (Program p : queue) {
-                logger.info("队列中内容：文件长度为{},node为{}",p.getProgramCode().length, p.getPeer());
-            }
-        }
-        logger.info("再获取一次ProgramQueue: {}", programQueue.getProgramQueue());
+        programQueue.addProgramMap(program);
+        programQueue.addProgramList(program);
+//        if(){
+//            CopyOnWriteArrayList<Program> queue = programQueue.;
+//            for (Program p : queue) {
+//                logger.info("队列中内容：文件长度为{},node为{}",p.getProgramCode().length, p.getPeer());
+//            }
+//        }
+//        logger.info("再获取一次ProgramQueue: {}", programQueue.getProgramQueue());
 //        programService.byteToFile(fileByte, path, name);
     }
 
@@ -262,6 +269,7 @@ public class MessageServerHandler {
     // supplier接收并处理fuzzer提交的payloads
     public synchronized boolean processPayloads(byte[] msgBody, long timestamp) {
         PayloadManager payloadManager = (PayloadManager) SerializeUtils.unSerialize(msgBody);
+        String programHash = payloadManager.getProgramHash();
         List<Payload> pathList = payloadManager.getPayloads();
         logger.info("收到的payloads的大小:{}", pathList.size());
         String address = payloadManager.getAddress();
@@ -269,7 +277,8 @@ public class MessageServerHandler {
         // 先校验newBlock
         if(validationService.supplierCheckNewBlock(newBlock)) {
             logger.info("通过supplier校验，开始筛选NewPath");
-            List<NewPath> newPaths = newPathService.ProcessPayloads(pathList, timestamp, address);
+            List<NewPath> newPaths = newPathService.ProcessPayloads(programHash, pathList, timestamp, address);
+
             if (newPaths.isEmpty()) {
                 logger.info("No new path found");
             }
@@ -277,6 +286,8 @@ public class MessageServerHandler {
             newPathManager.addPathHashMap(address, newPaths);
             HashMap<String, List<NewPath>> newPathMap = newPathManager.getPaths();
             logger.info("NewPathMap: size={}", newPathMap.size());
+            newPathManager.updateProgramPathInfo(programHash, newPaths.size(), newPathManager.getTotalPath());
+            programQueue.updateProgramList(programHash, newPaths.size(), newPathManager.getTotalPath());
             for (Map.Entry<String, List<NewPath>> entry : newPathMap.entrySet()) {
                 System.out.println(entry.getKey() + ":" + entry.getValue());
             }
@@ -287,9 +298,9 @@ public class MessageServerHandler {
 
     // 处理其他节点的ProgramQueue请求
     public synchronized MessagePacket responseProgramQueue() {
-        ArrayDeque<Program> queue = programQueue.getProgramQueue();
+        ConcurrentHashMap<String, Program> taskMap = programQueue.getTaskMap();
         PacketBody packetBody = new PacketBody();
-        packetBody.setItem(queue);
+        packetBody.setItem(taskMap);
         packetBody.setSuccess(true);
         MessagePacket messagePacket = buildPacket(MessagePacketType.PROGRAM_QUEUQ_RESP, packetBody, "成功");
         return messagePacket;

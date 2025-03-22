@@ -1,13 +1,16 @@
 package com.example.base.entities;
 
 import com.example.base.entities.block.Block;
+import lombok.Data;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Component
+@Data
 public class PayloadManager {
+    private String programHash;
     private CopyOnWriteArrayList<Payload> payloadList = new CopyOnWriteArrayList<>();
     private String address;
     private Block newBlock;
@@ -15,7 +18,8 @@ public class PayloadManager {
     public PayloadManager() {
     }
 
-    public PayloadManager(CopyOnWriteArrayList<Payload> payloadList, Block newBlock, String address) {
+    public PayloadManager(String programHash, CopyOnWriteArrayList<Payload> payloadList, Block newBlock, String address) {
+        this.programHash = programHash;
         this.payloadList = payloadList;
         this.newBlock = newBlock;
         this.address = address;

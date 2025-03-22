@@ -1,6 +1,7 @@
 package com.example.fuzzed.impl;
 
 import com.example.base.entities.NewPath;
+import com.example.base.entities.NewPathManager;
 import com.example.base.entities.Payload;
 import com.example.base.store.DBStore;
 import com.example.base.store.PathPrefix;
@@ -25,6 +26,7 @@ public class NewPathServiceImpl implements NewPathService {
     private static final Logger logger = LoggerFactory.getLogger(NewPathServiceImpl.class);
 
     private final DBStore dbStore;
+    private final NewPathManager newPathManager;
     private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private final Lock readLock = rwl.readLock();
     private final Lock writeLock = rwl.writeLock();
@@ -37,7 +39,7 @@ public class NewPathServiceImpl implements NewPathService {
      * @return
      */
     @Override
-    public List<NewPath> ProcessPayloads(List<Payload> payloads, long timestamp, String fuzzerAddress) {
+    public List<NewPath> ProcessPayloads(String programHash, List<Payload> payloads, long timestamp, String fuzzerAddress) {
         HashSet<List<Integer>> paths = new HashSet<>();
         List<NewPath> newPahtList = new ArrayList<>();
         for (Payload payload : payloads) {
@@ -49,7 +51,9 @@ public class NewPathServiceImpl implements NewPathService {
                 paths.add(path);
             }
         }
-        logger.info("去重后的pathList: {}", paths);
+        logger.info("pathList: {}", paths.size());
+        newPathManager.setTotalPath(newPathManager.getTotalPath() + payloads.size());
+
         //获得去重后的path，对它们进行处理
         for (List<Integer> path : paths) {
             String pathStr = StringUtils.join(path, ",");

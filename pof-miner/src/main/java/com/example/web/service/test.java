@@ -4,15 +4,16 @@ import com.example.base.Exception.WindowFileException;
 import com.example.base.entities.NewPath;
 import com.example.base.entities.Payload;
 import com.example.base.utils.WindowFileUtils;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 public class test {
 
@@ -125,8 +126,51 @@ public class test {
             System.out.println(key + ":" + value);
         });
     }
-    public static void main(String[] args) {
+
+    public static void extractTarGz(byte[] tarGzBytes, String outputDir) throws IOException {
+        try (ByteArrayInputStream byteStream = new ByteArrayInputStream(tarGzBytes);
+             GZIPInputStream gzipStream = new GZIPInputStream(byteStream);
+             TarArchiveInputStream tarStream = new TarArchiveInputStream(gzipStream)) {
+
+            TarArchiveEntry entry;
+            while ((entry = tarStream.getNextTarEntry()) != null) {
+                File outputFile = new File(outputDir, entry.getName());
+
+                if (entry.isDirectory()) {
+                    outputFile.mkdirs();
+                } else {
+                    // 确保父目录存在
+                    outputFile.getParentFile().mkdirs();
+
+                    // 写入文件
+                    try (FileOutputStream fos = new FileOutputStream(outputFile);
+                         BufferedOutputStream bos = new BufferedOutputStream(fos)) {
+                        byte[] buffer = new byte[4096];
+                        int len;
+                        while ((len = tarStream.read(buffer)) != -1) {
+                            bos.write(buffer, 0, len);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    public static void main(String[] args) throws IOException {
 //        directoryWatcher();
-        executeCommand("/home/wj/pofChain/AFL/afl_testfiles/test_afl_files/string_length");
+//        executeCommand("/home/wj/pofChain/AFL/afl_testfiles/test_afl_files/string_length");
+        String base64File = "/home/wj/dockerAFLdemo/pofChain/supplierfiles/potrace.b64";  // Base64 文件路径
+        String outputDir = "/home/wj/dockerAFLdemo/pofChain/programQueue";  // 解压目标目录
+
+        // 读取 Base64 文件
+        String base64Data = new String(Files.readAllBytes(Paths.get(base64File)));
+        base64Data = base64Data.replaceAll("\\s", "");
+
+        // 解码 Base64
+        byte[] tarGzBytes = Base64.getDecoder().decode(base64Data);
+
+        // 解压 .tar.gz
+        extractTarGz(tarGzBytes, outputDir);
+
+        System.out.println("解压完成，文件存放在：" + outputDir);
     }
 }

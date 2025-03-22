@@ -51,6 +51,7 @@ public class ChainServiceImpl implements ChainService {
         return getBlockByHeight(0);
     }
 
+
     @Override
     public Block getBlockByHeight(long height) {
         readLock.lock();
@@ -60,6 +61,7 @@ public class ChainServiceImpl implements ChainService {
             readLock.unlock();
             return block;
         }
+        readLock.unlock();
         return null;
     }
 

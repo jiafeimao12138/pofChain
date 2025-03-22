@@ -33,7 +33,7 @@ public class P2pServerListener implements TioServerListener {
         if (isConnected) {
             logger.info("P2pServerListener.java : 连接新节点: {};{}", channelContext.getServerNode(), channelContext.getClientNode());
             // 请求ProgramQueue
-            ApplicationContextProvider.publishEvent(new GetProgramQueue(0));
+//            ApplicationContextProvider.publishEvent(new GetProgramQueue(0));
 //            MessagePacket hellopacket = new MessagePacket();
 //            hellopacket.setType(MessagePacketType.HELLO_MESSAGE);
 //            Message msg = new Message("", "", "与服务器握手完成");

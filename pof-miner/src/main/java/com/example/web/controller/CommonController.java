@@ -1,7 +1,9 @@
 package com.example.web.controller;
 
+import com.example.base.entities.Program;
 import com.example.base.entities.block.Block;
 import com.example.base.vo.JsonVo;
+import com.example.fuzzed.ProgramService;
 import com.example.web.service.ChainService;
 import com.example.web.service.impl.FakeTXGenerator;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @RestController
 @RequestMapping("common")
@@ -19,6 +24,7 @@ public class CommonController {
 
     private final ChainService chainService;
     private final FakeTXGenerator generator;
+    private final ProgramService programService;
 
     @RequestMapping("generateFakeTXs")
     public void generateFakeTXs() throws Exception {
@@ -37,6 +43,17 @@ public class CommonController {
     @RequestMapping("getLocalBlocks")
     public List<Long> getLocalBlocks() {
         return chainService.getLocalBlocksHeight();
+    }
+
+    @RequestMapping("getLatestBlocks")
+    public List<Block> getLatestBlocks() {
+        ArrayList<Block> blocks = new ArrayList<>();
+        List<Long> heights = chainService.getLocalBlocksHeight();
+        for (Long height : heights) {
+            Block block = chainService.getBlockByHeight(height);
+            blocks.add(block);
+        }
+        return blocks;
     }
 
     @RequestMapping("getBlocks")
@@ -63,12 +80,12 @@ public class CommonController {
     }
 
     @RequestMapping("getBlockByHeight")
-    public JsonVo<Block> getBlockByHeight(@RequestParam long height) {
+    public Block getBlockByHeight(@RequestParam long height) {
         Block block = chainService.getBlockByHeight(height);
-        JsonVo<Block> jsonVo = new JsonVo<>();
-        jsonVo.setData(block);
-        jsonVo.setCode(JsonVo.SUCCESS);
-        return jsonVo;
+//        JsonVo<Block> jsonVo = new JsonVo<>();
+//        jsonVo.setData(block);
+//        jsonVo.setCode(JsonVo.SUCCESS);
+        return block;
     }
 
     @Deprecated
@@ -82,12 +99,12 @@ public class CommonController {
     }
 
     @RequestMapping("getChainLatestBlock")
-    public JsonVo<Block> getLocalChainLatestBlock() {
+    public Block getLocalChainLatestBlock() {
         Block localLatestBlock = chainService.getLocalLatestBlock();
-        JsonVo jsonVo = new JsonVo<>();
-        jsonVo.setData(localLatestBlock);
-        jsonVo.setCode(JsonVo.SUCCESS);
-        return jsonVo;
+//        JsonVo jsonVo = new JsonVo<>();
+//        jsonVo.setData(localLatestBlock);
+//        jsonVo.setCode(JsonVo.SUCCESS);
+        return localLatestBlock;
     }
 
     @RequestMapping("getLocalChainHeight")
@@ -95,6 +112,20 @@ public class CommonController {
         Block localLatestBlock = chainService.getLocalLatestBlock();
         long height = localLatestBlock.getBlockHeader().getHeight();
         return new JsonVo<>(JsonVo.SUCCESS, height);
+    }
+
+    @RequestMapping("getTasks")
+    public JsonVo<Program> getTasks() {
+        ConcurrentHashMap<String, Program> tasks = programService.getTasks();
+        ArrayList<Program> taskList = new ArrayList<>();
+        for (Map.Entry<String, Program> entry : tasks.entrySet()) {
+            taskList.add(entry.getValue());
+        }
+
+        JsonVo jsonVo = new JsonVo<>();
+        jsonVo.setCode(JsonVo.SUCCESS);
+        jsonVo.setData(taskList);
+        return jsonVo;
     }
 
 }

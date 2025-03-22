@@ -22,7 +22,6 @@ public class BlockHeader {
 
     }
 
-
     public BlockHeader(
                        String hashPreBlock,
                        String hashMerkleRoot,

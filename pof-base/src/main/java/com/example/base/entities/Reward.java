@@ -13,7 +13,6 @@ public class Reward {
         HIGH,
         CRITICAL,
         NEWPATH,           // 每条新路径奖励
-        NPATH_QUOTA        // 每次奖励前几名
     }
 
 
@@ -23,7 +22,6 @@ public class Reward {
     {
         RewardHashmap = new HashMap<>();
         this.RewardHashmap.put(RewardType.NEWPATH, 0);
-        this.RewardHashmap.put(RewardType.NPATH_QUOTA, 0);
         this.RewardHashmap.put(RewardType.CRITICAL, 0);
         this.RewardHashmap.put(RewardType.HIGH, 0);
         this.RewardHashmap.put(RewardType.LOW, 0);

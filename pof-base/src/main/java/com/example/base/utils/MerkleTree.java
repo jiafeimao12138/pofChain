@@ -44,7 +44,7 @@ public class MerkleTree {
         // 内部节点奇数个，只对left节点进行计算
         if (children.size() % 2 != 0) {
             Node child = children.get(children.size() - 1);
-            Node parent = constructInternalNode(child, null);
+            Node parent = constructInternalNode(child, child);
             parents.add(parent);
         }
 
@@ -80,8 +80,8 @@ public class MerkleTree {
 
     private Node constructInternalNode(Node leftChild, Node rightChild) {
         Node parent = new Node();
-        if (rightChild == null) {
-            parent.hash = leftChild.hash;
+        if (rightChild == null || rightChild.hash == null) {
+            parent.hash = leftChild.hash != null ? leftChild.hash : new byte[0]; // 避免 null
         } else {
             parent.hash = internalHash(leftChild.hash, rightChild.hash);
         }
@@ -91,6 +91,8 @@ public class MerkleTree {
     }
 
     private byte[] internalHash(byte[] leftChildHash, byte[] rightChildHash) {
+        if (leftChildHash == null) leftChildHash = new byte[0];
+        if (rightChildHash == null) rightChildHash = new byte[0];
         byte[] mergedBytes = ByteUtils.merge(leftChildHash, rightChildHash);
         return DigestUtils.sha256(mergedBytes);
     }
