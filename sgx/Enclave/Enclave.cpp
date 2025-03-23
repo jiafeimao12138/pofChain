@@ -92,7 +92,7 @@ void start_fuzzing_timer() {
 
         if (current_time - start_time >= max_time) {
             printf("时间到，暂停 Fuzzing 进程\n");
-            printf("current=%d\n", current_time);
+            printf("=========current=%d\n", current_time);
             
             // 获取 `fuzz_worker` 进程 ID
             ocall_get_fuzz_worker_pid(0, target_pid, &fuzz_worker_pid);

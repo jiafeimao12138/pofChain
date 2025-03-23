@@ -128,4 +128,25 @@ public class CommonController {
         return jsonVo;
     }
 
+    // 请求区块平均生成时间
+    @RequestMapping("getAvgBlockTime")
+    public double getAvgBlockTime() {
+        ArrayList<Block> blocks = new ArrayList<>();
+        long prevTime = chainService.getBlockByHeight(1).getBlockHeader().getNTime();
+        long chainHeight = chainService.getChainHeight();
+        ArrayList<Long> diffList = new ArrayList<>();
+        for (long i = 2; i <= chainHeight; i++) {
+            Block block = chainService.getBlockByHeight(i);
+            long nTime = block.getBlockHeader().getNTime();
+            long diff = nTime - prevTime;
+            diffList.add(diff);
+            prevTime = nTime;
+        }
+        double avg = diffList.stream()
+                .mapToLong(Long::longValue)
+                .average()
+                .orElse(0.0);
+        return avg;
+    }
+
 }

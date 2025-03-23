@@ -165,4 +165,25 @@ public class ChainServiceImpl implements ChainService {
         readLock.unlock();
         return heights;
     }
+
+    @Override
+    public long getChainHeight() {
+        readLock.lock();
+        Optional<Object> o = rocksDBStore.get(BlockPrefix.HEIGHT.getPrefix());
+        long height = -1;
+        if (o.isPresent()) {
+            Object value = o.get();
+            if (value instanceof Integer) {
+                height = ((Integer) value).longValue();  // Integer 转 Long
+            } else if (value instanceof Long) {
+                height = (Long) value;
+            } else {
+                throw new IllegalStateException("Unexpected type: " + value.getClass());
+            }
+        }
+        readLock.unlock();
+        return height;
+    }
+
+
 }

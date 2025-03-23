@@ -84,10 +84,8 @@ public class MiningServiceImpl implements MiningService {
     private String recordFile;
     @Value("${wallet.address}")
     private String addressFilePath;
-    @Value("${afl.testcase}")
-    private String testcasefile;
     @Value("${afl.pathfile}")
-    private String testpathfile;
+    private String testcasefile;
     @Value("${enclave.path}")
     private String enclavePath;
 
@@ -157,7 +155,7 @@ public class MiningServiceImpl implements MiningService {
                     if (Files.exists(signalPath) && new String(Files.readAllBytes(signalPath)).trim().equals("start_java")) {
 //                        logger.info("收到信号，开始计算hash:{}", exec_time);
                         // 执行计算hash的逻辑
-                        doMiningthing(Paths.get(testcasefile), Paths.get(testpathfile), head, end);
+                        doMiningthing(Paths.get(testcasefile), head, end);
                         // 执行完毕后，通知 Enclave 继续
                         Files.write(signalPath, "resume".getBytes());
 //                        logger.info("resume:{}", exec_time);
@@ -277,7 +275,7 @@ public class MiningServiceImpl implements MiningService {
                         }
                         System.out.println();
                         if (testcasefilesList.size() > 1 && pathfilesList.size() > 1) {
-                            doMiningthing(testcasefilesList.pop(), pathfilesList.pop(), head, end);
+                            doMiningthing(testcasefilesList.pop(), head, end);
                         }
                     }
                 }
@@ -298,24 +296,22 @@ public class MiningServiceImpl implements MiningService {
     }
 
     public void doMiningthing(Path testcaseFile,
-                              Path pathFile,
                               BigInteger head,
                               BigInteger end) throws WindowFileException, IOException, InterruptedException {
         // 如果文件为空
-        if (!Files.exists(testcaseFile) || !Files.exists(pathFile)) {
-            logger.info("testcaseFile或pathFile不存在");
+        if (!Files.exists(testcaseFile)) {
+            logger.info("testcaseFile不存在");
             return;
-        } else if (Files.size(testcaseFile) == 0 || Files.size(pathFile) == 0) {
-            logger.info("testcaseFile或pathFile为空");
+        } else if (Files.size(testcaseFile) == 0) {
+            logger.info("testcaseFile为空");
             return;
         }
-        triples = WindowFileUtils.windowFilesToTriple(
+        triples = WindowFileUtils.parsetestfile(
                 testcaseFile.toAbsolutePath().toString(),
-                pathFile.toAbsolutePath().toString(),
                 recordFile
                 );
         // 向中间值添加本轮挖矿的path信息，等到新区块成功挖出后再置空
-        payloadManager.addPayloads(triples);
+        payloadManager.setPayloads(triples);
 //        if(!extractTrailingNumber(testcaseFile.toString()).equals(extractTrailingNumber(pathFile.toString()))) {
 //            logger.error("错误！！！读取窗口文件错误！！！,{},{}", testcaseFile, pathFile);
 //        }
@@ -350,6 +346,10 @@ public class MiningServiceImpl implements MiningService {
             // 挖矿成功，并且提交payloads
             if (whenmined(newBlock, newHash, supplier)) {
                 logger.info("挖矿成功，并且提交payloads");
+                triples.clear();
+                // 清空文件内容
+                Files.newBufferedWriter(testcaseFile).close();
+                logger.info("已清空窗口文件");
             } else {
                 logger.info("失败");
             }
@@ -359,11 +359,7 @@ public class MiningServiceImpl implements MiningService {
         BigInteger newHashInteger = new BigInteger(newHash, 16);
 //        String content = "," + hitCount + "," + fileNum + "," + newHashInteger + "\n";
 //        Files.write(this.path, content.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-        triples.clear();
-        // 清空文件内容
-        Files.newBufferedWriter(testcaseFile).close();
-        Files.newBufferedWriter(pathFile).close();
-        logger.info("已清空窗口文件");
+
     }
 
     public Block computeWindowHash(Block preBlock, List<Transaction> transactionList, List<Payload> payloads){

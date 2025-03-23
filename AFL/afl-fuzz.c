@@ -2606,8 +2606,8 @@ static u8 run_target(char** argv, u32 timeout) {
 
 static void calibration_write(){
   char *s = "======calibration=====\n";
-  s32 testcase_fd = open("testcase_file", O_WRONLY | O_CREAT | O_APPEND, 0644);
-  ck_write(testcase_fd, s , strlen(s), "testcase_file");
+  s32 testcase_fd = open("testfile1", O_WRONLY | O_CREAT | O_APPEND, 0644);
+  ck_write(testcase_fd, s , strlen(s), "testfile1");
   close(testcase_fd);
 }
 
@@ -2617,14 +2617,15 @@ static void calibration_write(){
 
 static void write_to_testcase(void* mem, u32 len) {
  
-  s32 testcase_fd = open("testcase_file", O_RDWR | O_CREAT | O_APPEND, 0777);
+  s32 testcase_fd = open("testfile1", O_RDWR | O_CREAT | O_APPEND, 0777);
 
   if(strstr(mem, "mem=") != NULL){
     printf(mem);
   }
   if(iscrash == 0){
-    ck_write(testcase_fd, "mem=", 4, "testcase_file");
-    ck_write(testcase_fd, mem, len, "testcase_file");
+    ck_write(testcase_fd, "mem=", 4, "testfile1");
+    ck_write(testcase_fd, mem, len, "testfile1");
+    ck_write(testcase_fd, "stop", 4, "testfile1");
     close(testcase_fd);
 
     s32 fd = out_fd;
@@ -2649,7 +2650,7 @@ static void write_to_testcase(void* mem, u32 len) {
   }
 //  将save_if_interesting中判断出的crash记录到文件中,添加到最后即可，因为最后一个case就是上一个执行的case
   else {
-     ck_write(testcase_fd, mem, len, "testcase_file");
+     ck_write(testcase_fd, mem, len, "testfile1");
      close(testcase_fd);
 //     把该标志重新设置为0
      iscrash = 0;
@@ -2661,22 +2662,23 @@ static void write_to_testcase(void* mem, u32 len) {
 /* The same, but with an adjustable gap. Used for trimming. */
 
 static void write_with_gap(void* mem, u32 len, u32 skip_at, u32 skip_len) {
-  s32 testcase_fd = open("testcase_file", O_WRONLY | O_CREAT | O_APPEND, 0644);
-  ck_write(testcase_fd, "mem=", 4, "testcase_file");
+  s32 testcase_fd = open("testfile1", O_WRONLY | O_CREAT | O_APPEND, 0644);
+  ck_write(testcase_fd, "mem=", 4, "testfile1");
   // if(strstr(mem, "mem=") != NULL){
   //   printf(mem);
   // }
   u32 tail_len = len - skip_at - skip_len;
   if (skip_at)
   {
-    ck_write(testcase_fd, mem, skip_at, "testcase_file");
+    ck_write(testcase_fd, mem, skip_at, "testfile1");
   }
   if (tail_len)
   {
-    ck_write(testcase_fd,mem + skip_at + skip_len, tail_len, "testcase_file");
+    ck_write(testcase_fd,mem + skip_at + skip_len, tail_len, "testfile1");
   }
-  // ck_write(testcase_fd, mem, len, "testcase_file");
-  // ck_write(testcase_fd, "===trim===", 10, "testcase_file");
+  ck_write(testcase_fd, "stop", 4, "testfile1");
+  // ck_write(testcase_fd, mem, len, "testfile1");
+  // ck_write(testcase_fd, "===trim===", 10, "testfile1");
   close(testcase_fd);
 
   s32 fd = out_fd;
@@ -4887,7 +4889,7 @@ EXP_ST u8 common_fuzz_stuff(char** argv, u8* out_buf, u32 len) {
   /* This handles FAULT_ERROR for us: */
 
   queued_discovered += save_if_interesting(argv, out_buf, len, fault);
-//  如果是crash,则将它记入testcase_file中
+//  如果是crash,则将它记入testfile1中
   if(iscrash == 1){
      write_to_testcase("crash", strlen("crash"));
   }
@@ -7185,7 +7187,7 @@ static void handle_timeout(int sig) {
 // setitimer目前是1s，那就以1s为单位计数，比如超时算5s的话，那当计数器达到5，就触发
 //       printf("child_pid=%d\n", child_pid);
 //        char *path_source = "testfile1";
-//        char *case_source = "testcase_file";
+//        char *case_source = "testfile1";
 //
 //        char case_dest[50];
 //        char path_dest[50];
@@ -8497,9 +8499,9 @@ int main(int argc, char** argv) {
   // setrlimit(RLIMIT_CPU, &rlim);
 
   // 创建初始窗口文件
-//  FILE *testcase_file = fopen("./afl_testfiles/windows/window_testcases/testcase_1", "w");
+//  FILE *testfile1 = fopen("./afl_testfiles/windows/window_testcases/testcase_1", "w");
 //  FILE *paths_file = fopen("./afl_testfiles/windows/window_paths/testfile_1", "w");
-//  fclose(testcase_file);
+//  fclose(testfile1);
 //  fclose(paths_file);
 
 //  timer.it_value.tv_sec = 1;      // 首次触发前的延迟时间（秒）

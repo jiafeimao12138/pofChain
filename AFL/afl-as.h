@@ -925,7 +925,7 @@ static const u8* my_asm =
   
 
   ".filename:\n"
-  "  .asciz \"testfile1\"\n" 
+  "  .asciz \"testcase_file\"\n"
   "mymsg:\n"
   "  .ascii \"Hello, %d\n\"\n"
   ".teststring:\n"

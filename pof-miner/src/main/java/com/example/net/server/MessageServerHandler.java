@@ -25,10 +25,14 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.tio.client.ClientChannelContext;
 import org.tio.core.Node;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -59,6 +63,11 @@ public class MessageServerHandler {
     private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private final Lock writeLock = rwl.writeLock();
 
+    @Value("${afl.testcase}")
+    private String testcasefile;
+    @Value("${afl.pathfile}")
+    private String testpathfile;
+
 
     public synchronized MessagePacket helloMessage(byte[] msgBody) {
         Message message = (Message) SerializeUtils.unSerialize(msgBody);
@@ -80,7 +89,7 @@ public class MessageServerHandler {
     }
 
     //fuzzer处理接收到的新区块
-    public synchronized MessagePacket receiveNewBlock_fuzzer(byte[] msgBody) throws TransactionNotExistException {
+    public synchronized MessagePacket receiveNewBlock_fuzzer(byte[] msgBody) throws TransactionNotExistException, IOException {
         Block newBlock = (Block) SerializeUtils.unSerialize(msgBody);
         // 先检查该区块是否本地已存在
         if (chainService.getBlockByHash(newBlock.getBlockHash()) != null) {
@@ -124,6 +133,11 @@ public class MessageServerHandler {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+
+        // 清空文件内容
+        Files.newBufferedWriter(Paths.get(testcasefile)).close();
+        Files.newBufferedWriter(Paths.get(testpathfile)).close();
+        logger.info("已清空窗口文件");
         return buildPacket(MessagePacketType.RES_NEW_BLOCK, new PacketBody(newBlock, true), "成功");
     }
 
@@ -281,17 +295,20 @@ public class MessageServerHandler {
 
             if (newPaths.isEmpty()) {
                 logger.info("No new path found");
+            } else {
+                logger.info("New Path: {}", newPaths.size());
+                // 添加到NewPathMap中，等待排名
+                newPathManager.addPathHashMap(address, newPaths);
+                HashMap<String, List<NewPath>> newPathMap = newPathManager.getPaths();
+                logger.info("NewPathMap: size={}", newPathMap.size());
+                newPathManager.updateProgramPathInfo(programHash, newPaths.size(), newPathManager.getTotalPath());
+                // 更新新路径和总路径数量
+                programQueue.updateProgramList(programHash, newPaths.size(), newPathManager.getTotalPath());
+//                for (Map.Entry<String, List<NewPath>> entry : newPathMap.entrySet()) {
+//                    System.out.println(entry.getKey() + ":" + entry.getValue());
+//                }
+                return true;
             }
-            // 添加到NewPathMap中，等待排名
-            newPathManager.addPathHashMap(address, newPaths);
-            HashMap<String, List<NewPath>> newPathMap = newPathManager.getPaths();
-            logger.info("NewPathMap: size={}", newPathMap.size());
-            newPathManager.updateProgramPathInfo(programHash, newPaths.size(), newPathManager.getTotalPath());
-            programQueue.updateProgramList(programHash, newPaths.size(), newPathManager.getTotalPath());
-            for (Map.Entry<String, List<NewPath>> entry : newPathMap.entrySet()) {
-                System.out.println(entry.getKey() + ":" + entry.getValue());
-            }
-            return true;
         }
         return false;
     }

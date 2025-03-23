@@ -6,10 +6,15 @@ import org.apache.commons.lang3.tuple.Triple;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+
 
 /*
 * 处理窗口文件testcase和testfile, 生成元组(input, path, iscrash)
@@ -23,10 +28,86 @@ public class WindowFileUtils {
     static String lastWindowcase = "";
     static List<Integer> lastWindowpath = new ArrayList<>();
 
+
+
+    public static CopyOnWriteArrayList<Payload> parsetestfile(String testfile, String recordFile) throws IOException {
+        CopyOnWriteArrayList<Payload> payloadsList = new CopyOnWriteArrayList<>();
+        StringBuilder stringBuilder = new StringBuilder();
+        FileInputStream pathFile = new FileInputStream(testfile);
+        HashSet<List<Integer>> pathSet = new HashSet<>();
+
+        // 读recordFile
+        String lastWinCase = readLastCase(recordFile);
+        byte[] pathsBuffer = new byte[1024]; // 定义缓冲区
+        int bytesRead;
+        while ((bytesRead = pathFile.read(pathsBuffer)) != -1) {
+            // 将读取的字节转换为字符串
+            for (int i = 0; i < bytesRead; i++) {
+                stringBuilder.append(String.format("%02X", pathsBuffer[i])); // 转换为十六进制表示
+            }
+        }
+        String pathstr = stringBuilder.toString();
+
+        // 说明被截断了，要把recordFile中的加上
+        if (!pathstr.startsWith("6D656D3D"))
+            pathstr = lastWinCase + pathstr;
+        String[] split = pathstr.split("6D656D3D");
+
+        for (int i = 1; i < split.length; i++) {
+            String[] split1 = split[i].split("73746F70");
+            // 截断路径
+            if (split1.length < 2){
+                String input = split1[0];
+                System.out.println(i + ":" + hexToAscii(input));
+                continue;
+            }
+
+            String input = split1[0];
+            String hexpathStr = split1[1];
+
+            int index = 0;
+            ArrayList<Integer> pathList = new ArrayList<>();
+            while (index <= hexpathStr.length() - 4) {
+                String hex = hexpathStr.substring(index, index + 4);
+                String newHex = hex.substring(2,4) + hex.substring(0,2);
+                int path_num = Integer.parseInt(newHex, 16);
+                pathList.add(path_num << 1);
+                index += 4;
+            }
+
+            if(pathSet.add(pathList)){
+//                System.out.println(i + ":" + pathList.size());
+            }
+            Payload payload = new Payload(input, pathList, false);
+            payloadsList.add(payload);
+//            System.out.println(i + ":" + hexToAscii(input) + ":" + pathList);
+//            System.out.println(i + ":" + input + ":" + pathList);
+        }
+        // 存储最后一个case，可能被截断也可能是完整的
+        String lastCase = "6D656D3D" + split[split.length - 1];
+        recordTruncatedPath(recordFile, lastCase);
+        System.out.println("===========新路径数量:" + pathSet.size());
+        System.out.println("===========总路径数量：" + split.length);
+        System.out.println("===========payloads: " + payloadsList.size());
+        return payloadsList;
+    }
+
+    public static String hexToAscii(String hex) {
+        StringBuilder output = new StringBuilder();
+        for (int i = 0; i < hex.length(); i += 2) {
+            // 每两个字符是一个字节，转换成整数再转为字符
+            String str = hex.substring(i, i + 2);
+            int decimal = Integer.parseInt(str, 16);
+            output.append((char) decimal);
+        }
+        return output.toString();
+    }
+
     public static CopyOnWriteArrayList<Payload> windowFilesToTriple(String testcase, String paths, String recordFile) throws WindowFileException{
 
         StringBuilder stringBuilder = new StringBuilder();
 
+        // testcase文件处理
         File file = new File(testcase); // 创建文件对象
         FileInputStream fis = null;
         try {
@@ -44,6 +125,7 @@ public class WindowFileUtils {
 //            for (int i = 0; i < cases_list.size(); i++) {
 //                System.out.println(i + ":" + cases_list.get(i));
 //            }
+            System.out.println("case_list: " + cases_list.size());
         } catch (IOException e) {
             e.printStackTrace(); // 捕获并处理异常
         } finally {
@@ -55,6 +137,7 @@ public class WindowFileUtils {
                 e.printStackTrace(); // 捕获关闭时可能发生的异常
             }
         }
+        // 路径文件处理
         try {
             FileInputStream pathFile = new FileInputStream(paths);
 
@@ -67,11 +150,13 @@ public class WindowFileUtils {
                 }
             }
             String pathstr = stringBuilder.toString();
-            System.out.println("path length: " + pathstr.length());
-            String[] pathsplits = pathstr.split("0000");
-//            for (int i = 1; i < pathsplits.length; i++) {
-//                System.out.println(i + ":" + pathsplits[i]);
-//            }
+//            System.out.println("path length: " + pathstr.length());
+//            System.out.println(pathstr);
+            String[] pathsplits = pathstr.split("3565");
+            for (int i = 0; i < pathsplits.length; i++) {
+                System.out.println(i + ":" + pathsplits[i]);
+            }
+            System.out.println("pathsplits: " + (pathsplits.length - 1));
             String firstpath = pathsplits[0];
 //            System.out.println("firstpath=" + firstpath);
             //如果上个window的最后一条path未结束,将它加到pathList，总path数加1。将上一个窗口的最后一个case加到caselist第一个
@@ -92,8 +177,6 @@ public class WindowFileUtils {
                 cases_list.add(0,lastWindowcase);
 //                System.out.println("path:" + pathsplits.length);
 //                System.out.println("case:" + cases_list.size());
-            } else {
-//                System.out.println("path:" + (pathsplits.length - 1));
             }
             for (int i = 1; i < pathsplits.length; i++) {
                 String Hexpath = pathsplits[i];
@@ -113,7 +196,6 @@ public class WindowFileUtils {
 //                }
 //                System.out.println();
             }
-
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -157,6 +239,37 @@ public class WindowFileUtils {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void recordTruncatedPath(String fileName, String lastCase) {
+        try {
+            Files.write(Paths.get(fileName), lastCase.getBytes(StandardCharsets.UTF_8));
+            System.out.println("文件写入成功！");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String readLastCase(String fileName) throws IOException {
+        File file = new File(fileName);
+        if (!file.exists()) {
+            if (file.createNewFile()) {
+                System.out.println("文件创建成功: " + file);
+            }
+
+        } else {
+            try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+                StringBuilder content = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) {
+                    content.append(line).append("\n");
+                }
+                return content.toString();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
     }
 
     //从record文件中读取
@@ -221,28 +334,26 @@ public class WindowFileUtils {
         return binaryStringBuilder.toString(); // 返回最终的二进制字符串
     }
 
-    public static void main(String[] args) throws WindowFileException {
-        int num = 6;
-//        while (num <= 20){
-            System.out.println("num=" + num);
-            List<Payload> triples =
-                    WindowFileUtils.windowFilesToTriple("/home/wj/pofChain/AFL/afl_testfiles/window_testcases/testcase_" + num,
-                            "/home/wj/pofChain/AFL/afl_testfiles/window_paths/testfile_" + num, "");
-            num ++;
-            for (int i = 0; i < triples.size(); i++) {
-                Payload triple = triples.get(i);
-                String left = triple.getInput();
-                List<Integer> middle = triple.getPath();
-                Boolean right = triple.isCrash();
-                System.out.print("[" + left + ":");
-                for (int j = 0; j < middle.size(); j++) {
-                    System.out.print(middle.get(j) + "->");
-                }
-                System.out.print(right + "]");
-                System.out.println();
-            }
-//        }
-
+    public static void main(String[] args) throws WindowFileException, IOException {
+//            List<Payload> triples =
+//                    WindowFileUtils.windowFilesToTriple("/home/wj/dockerAFLdemo/pofChain/AFL/testcase_file",
+//                            "/home/wj/dockerAFLdemo/pofChain/AFL/testfile1", "/home/wj/dockerAFLdemo/pofChain/fuzzingfiles/windows/recordFile");
+//            for (int i = 0; i < triples.size(); i++) {
+//                Payload triple = triples.get(i);
+//                String left = triple.getInput();
+//                List<Integer> middle = triple.getPath();
+//                Boolean right = triple.isCrash();
+//                System.out.print("[" + left + ":");
+//                for (int j = 0; j < middle.size(); j++) {
+//                    System.out.print(middle.get(j) + "->");
+//                }
+//                System.out.print(right + "]");
+//                System.out.println();
+//            }
+//        System.out.println("triple size: " + triples.size());
+        WindowFileUtils.parsetestfile("/home/wj/dockerAFLdemo/pofChain/AFL/testfile1",
+                "/home/wj/dockerAFLdemo/pofChain/fuzzingfiles/windows/recordFile");
+        System.out.println(readLastCase("/home/wj/dockerAFLdemo/pofChain/fuzzingfiles/windows/recordFile"));
 
     }
 

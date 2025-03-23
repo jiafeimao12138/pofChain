@@ -65,10 +65,6 @@ public class NewPathServiceImpl implements NewPathService {
             if (o.isPresent()) {
                 List<Integer> rockspath = (List<Integer>) o.get();
                 logger.info("路径已存在，{}", rockspath);
-                if (!rockspath.equals(path)) {
-                    // @TODO 说明碰撞了
-
-                }
             }else {
                 writeLock.lock();
                 // 数据库中没有该路径，表明这是一个新路径，那么存入数据库中
@@ -80,7 +76,7 @@ public class NewPathServiceImpl implements NewPathService {
                 newPath.setFuzzerAddress(fuzzerAddress);
                 newPath.setTimestamp(timestamp);
                 newPahtList.add(newPath);
-                logger.info("newPath存入数据库：{}", newPath);
+//                logger.info("newPath存入数据库：{}", newPath);
                 writeLock.unlock();
             }
         }
