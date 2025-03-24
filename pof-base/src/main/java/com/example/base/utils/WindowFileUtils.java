@@ -49,11 +49,14 @@ public class WindowFileUtils {
         String pathstr = stringBuilder.toString();
 
         // 说明被截断了，要把recordFile中的加上
-        if (!pathstr.startsWith("6D656D3D"))
-            pathstr = lastWinCase + pathstr;
+//        if (!pathstr.startsWith("6D656D3D"))
+        pathstr = lastWinCase + pathstr;
+        System.out.println(pathstr);
         String[] split = pathstr.split("6D656D3D");
 
-        for (int i = 1; i < split.length; i++) {
+        // 不處理最後一個case，因為有可能是截斷路徑
+        for (int i = 1; i < split.length - 1; i++) {
+            System.out.println(i + ":" + split[i]);
             String[] split1 = split[i].split("73746F70");
             // 截断路径
             if (split1.length < 2){
@@ -64,6 +67,8 @@ public class WindowFileUtils {
 
             String input = split1[0];
             String hexpathStr = split1[1];
+            // 去掉還行
+            hexpathStr = hexpathStr.replaceAll("\r|\n", "");
 
             int index = 0;
             ArrayList<Integer> pathList = new ArrayList<>();
@@ -269,7 +274,7 @@ public class WindowFileUtils {
                 e.printStackTrace();
             }
         }
-        return null;
+        return "";
     }
 
     //从record文件中读取
@@ -353,7 +358,7 @@ public class WindowFileUtils {
 //        System.out.println("triple size: " + triples.size());
         WindowFileUtils.parsetestfile("/home/wj/dockerAFLdemo/pofChain/AFL/testfile1",
                 "/home/wj/dockerAFLdemo/pofChain/fuzzingfiles/windows/recordFile");
-        System.out.println(readLastCase("/home/wj/dockerAFLdemo/pofChain/fuzzingfiles/windows/recordFile"));
+//        System.out.println(readLastCase("/home/wj/dockerAFLdemo/pofChain/fuzzingfiles/windows/recordFile"));
 
     }
 

@@ -206,6 +206,13 @@ public class MiningServiceImpl implements MiningService {
         processBuilder.command("afl-fuzz", "-i", in , "-o", fuzzOutDir , targetProgram);
         try {
             Process process = processBuilder.start();
+            // 读取输出
+//            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+//                String line;
+//                while ((line = reader.readLine()) != null) {
+//                    System.out.println(line);
+//                }
+//            }
             // 等待命令执行完毕
             int exitCode = process.waitFor();
             System.out.println("AFL结束运行，退出代码: " + exitCode);
@@ -311,20 +318,7 @@ public class MiningServiceImpl implements MiningService {
                 recordFile
                 );
         // 向中间值添加本轮挖矿的path信息，等到新区块成功挖出后再置空
-        payloadManager.setPayloads(triples);
-//        if(!extractTrailingNumber(testcaseFile.toString()).equals(extractTrailingNumber(pathFile.toString()))) {
-//            logger.error("错误！！！读取窗口文件错误！！！,{},{}", testcaseFile, pathFile);
-//        }
-//        int fileNum = extractTrailingNumber(testcaseFile.toString());
-//        logger.info("本次处理文件num={}", fileNum);
-        // 每20个文件清理一次
-//        if(fileNum % 20 == 1 && fileNum > 1) {
-//            for (int i = 1; i <= 20; i++) {
-//                deleteFile(windowFiles + "/window_testcases/testcase_" + (fileNum- 21 + i));
-//                deleteFile(windowFiles + "/window_paths/testfile_" + (fileNum- 21 + i));
-//            }
-//            logger.info("本次清理完毕, 范围是{}到{}", fileNum - 20, fileNum - 1);
-//        }
+        payloadManager.addPayloads(triples);
         Block preBlock = chainService.getLocalLatestBlock();
         logger.info("本次计算区块hash的preBlock：高度为{}, Hash为{}", preBlock.getBlockHeader().getHeight(), preBlock.getBlockHash());
 
@@ -346,10 +340,7 @@ public class MiningServiceImpl implements MiningService {
             // 挖矿成功，并且提交payloads
             if (whenmined(newBlock, newHash, supplier)) {
                 logger.info("挖矿成功，并且提交payloads");
-                triples.clear();
-                // 清空文件内容
-                Files.newBufferedWriter(testcaseFile).close();
-                logger.info("已清空窗口文件");
+
             } else {
                 logger.info("失败");
             }
@@ -359,7 +350,10 @@ public class MiningServiceImpl implements MiningService {
         BigInteger newHashInteger = new BigInteger(newHash, 16);
 //        String content = "," + hitCount + "," + fileNum + "," + newHashInteger + "\n";
 //        Files.write(this.path, content.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-
+        triples.clear();
+        // 清空文件内容
+        Files.newBufferedWriter(testcaseFile).close();
+        logger.info("已清空窗口文件");
     }
 
     public Block computeWindowHash(Block preBlock, List<Transaction> transactionList, List<Payload> payloads){
