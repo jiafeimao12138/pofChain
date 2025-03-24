@@ -51,17 +51,16 @@ public class WindowFileUtils {
         // 说明被截断了，要把recordFile中的加上
 //        if (!pathstr.startsWith("6D656D3D"))
         pathstr = lastWinCase + pathstr;
-        System.out.println(pathstr);
         String[] split = pathstr.split("6D656D3D");
 
         // 不處理最後一個case，因為有可能是截斷路徑
         for (int i = 1; i < split.length - 1; i++) {
-            System.out.println(i + ":" + split[i]);
+//            System.out.println(i + ":" + split[i]);
             String[] split1 = split[i].split("73746F70");
             // 截断路径
             if (split1.length < 2){
                 String input = split1[0];
-                System.out.println(i + ":" + hexToAscii(input));
+//                System.out.println(i + ":" + hexToAscii(input));
                 continue;
             }
 
@@ -249,7 +248,7 @@ public class WindowFileUtils {
     public static void recordTruncatedPath(String fileName, String lastCase) {
         try {
             Files.write(Paths.get(fileName), lastCase.getBytes(StandardCharsets.UTF_8));
-            System.out.println("文件写入成功！");
+            System.out.println("record文件写入成功！");
         } catch (IOException e) {
             e.printStackTrace();
         }

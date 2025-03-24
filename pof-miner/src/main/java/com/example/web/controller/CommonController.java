@@ -2,8 +2,10 @@ package com.example.web.controller;
 
 import com.example.base.entities.Program;
 import com.example.base.entities.block.Block;
+import com.example.base.utils.BlockUtils;
 import com.example.base.vo.JsonVo;
 import com.example.fuzzed.ProgramService;
+import com.example.net.base.Mempool;
 import com.example.web.service.ChainService;
 import com.example.web.service.impl.FakeTXGenerator;
 import lombok.RequiredArgsConstructor;
@@ -25,10 +27,25 @@ public class CommonController {
     private final ChainService chainService;
     private final FakeTXGenerator generator;
     private final ProgramService programService;
+    private final Mempool mempool;
 
     @RequestMapping("generateFakeTXs")
     public void generateFakeTXs() throws Exception {
-        generator.generateTransactions();
+        while (true) {
+            try {
+                generator.generateTransactions();
+                System.out.println("本次交易发送完毕");
+                Thread.sleep(30000); // 睡眠 30000 毫秒，即 30 秒
+            } catch (InterruptedException e) {
+                e.printStackTrace(); // 如果线程在睡眠期间被中断，捕获异常
+            }
+        }
+
+    }
+
+    @RequestMapping("getMempoolSize")
+    public int getMempoolSize() {
+        return mempool.size();
     }
 
     /**
@@ -131,22 +148,63 @@ public class CommonController {
     // 请求区块平均生成时间
     @RequestMapping("getAvgBlockTime")
     public double getAvgBlockTime() {
-        ArrayList<Block> blocks = new ArrayList<>();
         long prevTime = chainService.getBlockByHeight(1).getBlockHeader().getNTime();
         long chainHeight = chainService.getChainHeight();
-        ArrayList<Long> diffList = new ArrayList<>();
+        ArrayList<Double> diffList = new ArrayList<>();
         for (long i = 2; i <= chainHeight; i++) {
             Block block = chainService.getBlockByHeight(i);
             long nTime = block.getBlockHeader().getNTime();
-            long diff = nTime - prevTime;
+            double diff = (nTime - prevTime) / 1000.0;
             diffList.add(diff);
             prevTime = nTime;
         }
         double avg = diffList.stream()
-                .mapToLong(Long::longValue)
+                .mapToDouble(Double::doubleValue)
                 .average()
                 .orElse(0.0);
         return avg;
     }
+
+    // 请求最新50个区块的生成时间
+    @RequestMapping("getBlockTimeList")
+    public List<Double> getBlockTimeList() {
+        long chainHeight = chainService.getChainHeight();
+        long l = (chainHeight - 50) >= 0 ? (chainHeight - 50) : 0;
+
+        long prevTime = chainService.getBlockByHeight(1).getBlockHeader().getNTime();
+        ArrayList<Double> diffList = new ArrayList<>();
+        for (long i = l + 2; i <= chainHeight; i++) {
+            Block block = chainService.getBlockByHeight(i);
+            long nTime = block.getBlockHeader().getNTime();
+            double diff = (nTime - prevTime)/1000;
+            diffList.add(diff);
+            prevTime = nTime;
+        }
+        return diffList;
+    }
+
+    @RequestMapping("getBlockAvgSize")
+    public double getBlockAvgSize() {
+        long chainHeight = chainService.getChainHeight();
+        ArrayList<Integer> sizeList = new ArrayList<>();
+        for (int i = 1; i <= chainHeight; i++) {
+            Block block = chainService.getBlockByHeight(i);
+            int blockSize = BlockUtils.getBlockSize(block);
+            sizeList.add(blockSize);
+        }
+        System.out.println(sizeList);
+        double avgSize = sizeList.stream()
+                .mapToInt(Integer::intValue)
+                .average()
+                .orElse(0.0);
+        return avgSize;
+    }
+
+//    @RequestMapping("getTotalNewPath")
+//    public long getTotalNewPath() {
+//
+//    }
+
+
 
 }

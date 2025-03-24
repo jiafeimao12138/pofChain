@@ -352,20 +352,20 @@ public class MessageServerHandler {
      */
     public synchronized boolean processNewTransaction(Transaction transaction) {
         try {
-            if (!transactionService.verify(transaction)) {
-                return false;
-            }
+//            if (!transactionService.verify(transaction)) {
+//                return false;
+//            }
             // 存储到mempool
             transactionService.storeMempool(transaction);
             // 持久化存储
-            writeLock.lock();
-            String txId = ByteUtils.bytesToHex(transaction.getTxId());
-            dbStore.put(WalletPrefix.TX_PREFIX.getPrefix() + txId, transaction);
-            dbStore.put(WalletPrefix.UTXO_PREFIX.getPrefix() + txId, transaction.getOutputs());
+//            writeLock.lock();
+//            String txId = ByteUtils.bytesToHex(transaction.getTxId());
+//            dbStore.put(WalletPrefix.TX_PREFIX.getPrefix() + txId, transaction);
+//            dbStore.put(WalletPrefix.UTXO_PREFIX.getPrefix() + txId, transaction.getOutputs());
             //@TODO 后面看要不要手动释放
 //        dbStore.close();
-            writeLock.unlock();
-            logger.info("已将交易{}存入数据库", txId);
+//            writeLock.unlock();
+//            logger.info("已将交易{}存入数据库", txId);
             return true;
         } catch (Exception e) {
             throw new RuntimeException(e);

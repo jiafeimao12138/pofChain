@@ -9,6 +9,7 @@ import com.example.base.store.BlockPrefix;
 import com.example.base.store.RocksDBStore;
 import com.example.base.utils.CmdArgsParser;
 import com.example.base.utils.SerializeUtils;
+import com.example.web.service.impl.FakeTXGenerator;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,12 +43,12 @@ public class PofRunner {
         }
     }
 
-    public boolean preparation() throws IOException {
+    public boolean preparation() throws Exception {
         String commandType = parser.getArgs().get(0);
         Block block;
         switch (commandType) {
             case "genesis" :
-                logger.info("创世节点生成中。。。。");
+                logger.info("创世节点启动中。。。。");
                 dbStore = new RocksDBStore(repo);
                 block = generateGenesisBlock();
 
@@ -99,7 +100,7 @@ public class PofRunner {
         genesisBlockHeader.setNNonce(2083236893);
         genesisBlockHeader.setHashMerkleRoot("");
         genesisBlockHeader.setHeight(0l);
-        genesisBlockHeader.setNTime(1732436151);
+        genesisBlockHeader.setNTime(1742827391000l);
         genesisBlock.setBlockHeader(genesisBlockHeader);
         Transaction transaction = newCoinbaseTX("000000", 0, Transaction.BLOCK_REWARD);
         ArrayList<Transaction> transactions = new ArrayList<>();

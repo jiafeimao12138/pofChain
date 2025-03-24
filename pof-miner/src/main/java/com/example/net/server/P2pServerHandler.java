@@ -116,6 +116,7 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 if (!result) {
                     logger.info("检查到交易不合法：{}", transaction.getTxIdStr());
                 }
+                break;
             default:
                 logger.error("错误消息！！！");
         }

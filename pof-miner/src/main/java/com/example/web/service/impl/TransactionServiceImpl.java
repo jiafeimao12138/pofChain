@@ -71,7 +71,7 @@ public class TransactionServiceImpl implements TransactionService {
         TXOutput txOutput = TXOutput.newTXOutput(blockReward + fee, toAddress);
         coinBaseTX.addOutput(txOutput);
         coinBaseTX.setCreateTime(System.currentTimeMillis());
-        logger.info("coinBaseTX长度: {}", coinBaseTX.getInputs().get(0).getPreviousTXId().length);
+//        logger.info("coinBaseTX长度: {}", coinBaseTX.getInputs().get(0).getPreviousTXId().length);
         return coinBaseTX;
     }
 
@@ -172,7 +172,7 @@ public class TransactionServiceImpl implements TransactionService {
         dbStore.put(WalletPrefix.TX_PREFIX.getPrefix() + txId, transaction);
         dbStore.put(WalletPrefix.UTXO_PREFIX.getPrefix() + txId, transaction.getOutputs());
         writeLock.unlock();
-        logger.info("已将交易{}存入数据库", txId);
+//        logger.info("已将交易{}存入数据库", txId);
     }
 
     /**

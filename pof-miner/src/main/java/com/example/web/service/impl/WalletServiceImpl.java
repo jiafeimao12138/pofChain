@@ -108,7 +108,6 @@ public class WalletServiceImpl implements WalletService {
     public void removeSpentTXOutput(Transaction transaction) {
         writeLock.lock();
         List<TXInput> inputs = transaction.getInputs();
-
         for (TXInput input : inputs) {
             String TXId = ByteUtils.bytesToHex(input.getPreviousTXId());
             List<TXOutput> utxos = dbStore.getUTXO(WalletPrefix.UTXO_PREFIX.getPrefix() + TXId);

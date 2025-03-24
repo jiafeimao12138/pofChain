@@ -1,6 +1,7 @@
 package com.example.net.base;
 
 import com.example.base.entities.transaction.Transaction;
+import com.example.base.utils.BlockUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -49,7 +50,7 @@ public class Mempool {
         for (Transaction tx : transactionList) {
             // 计算交易费率
             // 获取交易大小
-            int size = getObjectSize(tx);
+            int size = BlockUtils.getTransactionSize(tx);
             // 获取交易费
             Double feeRate = (double) tx.getFee() / size;
             map.put(tx, feeRate);

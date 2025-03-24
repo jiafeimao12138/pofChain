@@ -6,6 +6,7 @@ import com.example.base.entities.*;
 import com.example.base.entities.block.Block;
 import com.example.base.entities.block.BlockHeader;
 import com.example.base.entities.transaction.Transaction;
+import com.example.base.utils.BlockUtils;
 import com.example.base.utils.SerializeUtils;
 import com.example.base.utils.WindowFileUtils;
 import com.example.exception.TransactionNotExistException;
@@ -446,12 +447,17 @@ public class MiningServiceImpl implements MiningService {
      * 使用贪心算法选择交易费用高的交易
      */
     private List<Transaction> chooseTransactions() {
-        Map<Transaction, Double> txOrderByFees = mempool.txOrderByFees();
         ArrayList<Transaction> transactions = new ArrayList<>();
+        if (mempool.size() == 0) {
+            logger.error("mempool为空");
+            return transactions;
+        }
+        Map<Transaction, Double> txOrderByFees = mempool.txOrderByFees();
+
         int totalSize = 0;
         for (Map.Entry<Transaction, Double> entry : txOrderByFees.entrySet()) {
             Transaction transaction = entry.getKey();
-            int size = mempool.getObjectSize(transaction);
+            int size = BlockUtils.getTransactionSize(transaction);
             totalSize += size;
             if (totalSize > Block.BLOCK_MAX_SIZE)
                 break;

@@ -6,9 +6,14 @@ import com.example.net.base.MessagePacket;
 import com.example.net.base.MessagePacketType;
 import com.example.net.client.P2pClient;
 import com.example.net.events.NewTransactionEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
 
+@Component
 public class TransactionListener {
+    private static final Logger logger = LoggerFactory.getLogger(BlockEventListener.class);
     private final P2pClient p2pClient;
 
     public TransactionListener(P2pClient p2pClient) {

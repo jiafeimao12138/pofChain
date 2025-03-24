@@ -10,7 +10,7 @@ import java.io.InputStreamReader;
 @SpringBootApplication
 public class MinerApplication {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws Exception {
         for (String s : args) {
             System.out.println(s);
         }

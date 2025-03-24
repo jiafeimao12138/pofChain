@@ -22,7 +22,7 @@ import java.util.Objects;
 
 @Data
 public class Block implements Serializable {
-    public final static int BLOCK_MAX_SIZE = 1 * 1024 * 1024;
+    public final static int BLOCK_MAX_SIZE = 1 * 1024 * 100;
 
 //    header
     private String blockHash;
