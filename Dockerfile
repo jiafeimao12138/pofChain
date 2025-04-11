@@ -1,15 +1,15 @@
 # 使用基础镜像
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 # 设置环境变量以避免交互式提示
 # ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
 COPY . /app/pofChain
-COPY core_pattern /proc/sys/kernel/core_pattern
 
 # 安装必要的工具和依赖
 RUN apt-get update && apt-get install -y \
+    build-essential \
     locales \
     openjdk-8-jdk \
     cmake
@@ -20,7 +20,9 @@ RUN chmod +x pofChain/sgx_linux_x64_sdk_2.25.100.3.bin && \
     echo -e "no\n/opt/intel" | ./pofChain/sgx_linux_x64_sdk_2.25.100.3.bin && \
     rm -f pofChain/sgx_linux_x64_sdk_2.25.100.3.bin
     
-
+#RUN chmod 777 sgx_linux_x64_sdk_2.25.100.3.bin \
+#    && ./sgx_linux_x64_sdk_2.25.100.3.bin --prefix=/opt/intel --silent
+    
 # 设置 JAVA_HOME 环境变量
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 
 ENV PATH=$JAVA_HOME/bin:$PATH 
@@ -33,7 +35,7 @@ ENV SGX_SDK=/opt/intel/sgx-sdk
 ENV PATH=$PATH:$SGX_SDK/bin
 
 # 启用 SGX SDK 环境
-RUN echo "source $SGX_SDK/environment" >> ~/.bashrc
+# RUN echo "source $SGX_SDK/environment" >> ~/.bashrc
 
 RUN locale-gen zh_CN.UTF-8
 RUN cd pofChain/AFL && \

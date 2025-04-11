@@ -48,6 +48,8 @@
 #include "App.h"
 #include "Enclave_u.h"
 
+
+
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
 char *shm_ptr = NULL;
@@ -316,7 +318,7 @@ int ocall_check_afl() {
 
 void ocall_notify_java() {
     // 写入信号文件，通知 Java 开始执行
-    FILE *file = fopen("/home/wj/dockerAFLdemo/pofChain/start_java_signal.txt", "w");
+    FILE *file = fopen("../start_java_signal.txt", "w");
     if (file != NULL) {
         fprintf(file, "start_java\n");
         fclose(file);
@@ -327,7 +329,7 @@ int ocall_check_java(int* isEqual) {
     char buffer[16];
 
     while (true) {
-        FILE *file = fopen("/home/wj/dockerAFLdemo/pofChain/start_java_signal.txt", "r");
+        FILE *file = fopen("../start_java_signal.txt", "r");
         if (!file) {
             perror("Failed to open file");
             return 0; // 文件打开失败

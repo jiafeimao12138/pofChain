@@ -97,8 +97,7 @@ public class TransactionServiceImpl implements TransactionService {
         Map<String, List<Integer>> unspentOuts = result.getUnspentOuts();
 
         if (result.getUnspentOuts() == null) {
-            logger.error("ERROR: Not enough funds ! accumulated=" + accumulated + ", amount=" + amount);
-            throw new RuntimeException("ERROR: Not enough funds ! ");
+            return null;
         }
         Set<Map.Entry<String, List<Integer>>> entrySet = unspentOuts.entrySet();
         Transaction newTx = new Transaction();

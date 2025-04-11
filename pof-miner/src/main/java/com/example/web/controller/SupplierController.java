@@ -25,7 +25,6 @@ public class SupplierController {
     private final MessageService messageService;
     private final ProgramService programService;
     private final Node node;
-    private final Reward reward;
 
     @RequestMapping("/publishMsg")
     public void publishMsg(){
@@ -33,31 +32,22 @@ public class SupplierController {
     }
 
     @RequestMapping("/publishFile")
-    public void publishFile(@RequestParam String name, @RequestParam String desc) {
+    public void publishFile(@RequestParam String name, @RequestParam String desc,
+                            @RequestParam int lowReward,
+                            @RequestParam int mediumReward,
+                            @RequestParam int highReward,
+                            @RequestParam int criticalReward,
+                            @RequestParam int newPathReward) {
         node.setType(NodeType.SUPPLIER);
         logger.info("node:{}", node);
         // @TODO：supplier上传源代码
 //        programService.prepareTargetProgram("supplierfiles/string_length.c",
 //                "supplierfiles/string_length_publish", name, desc);
-        programService.uploadTask("supplierfiles/potrace.b64", "../programQueue/potrace/src/potrace", name, desc);
+        Reward reward = new Reward(lowReward, mediumReward, highReward, criticalReward, newPathReward);
+        programService.uploadTask("supplierfiles/potrace.b64", "../programQueue/potrace/src/potrace", name, desc,
+                reward);
     }
 
-    /**
-     * supplier设置漏洞奖励和新路径奖励
-     */
-    @RequestMapping("setReward")
-    public void setReward(@RequestParam int lowReward,
-                          @RequestParam int mediumReward,
-                          @RequestParam int highReward,
-                          @RequestParam int criticalReward,
-                          @RequestParam int newPathReward
-                          ) {
-        reward.setRewardValue(Reward.RewardType.LOW, lowReward);
-        reward.setRewardValue(Reward.RewardType.MEDIUM, mediumReward);
-        reward.setRewardValue(Reward.RewardType.HIGH, highReward);
-        reward.setRewardValue(Reward.RewardType.CRITICAL, criticalReward);
-        reward.setRewardValue(Reward.RewardType.NEWPATH, newPathReward);
-    }
 
     @RequestMapping("testvue")
     public List<Integer> getIcons() {

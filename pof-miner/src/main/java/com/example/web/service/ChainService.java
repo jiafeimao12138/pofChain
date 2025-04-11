@@ -15,4 +15,5 @@ public interface ChainService {
     long getMainChainHeight();
     List<Long> getLocalBlocksHeight();
     long getChainHeight();
+
 }

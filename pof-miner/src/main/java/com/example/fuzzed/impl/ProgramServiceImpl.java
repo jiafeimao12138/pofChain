@@ -2,6 +2,7 @@ package com.example.fuzzed.impl;
 
 import com.example.base.entities.*;
 import com.example.base.utils.ByteUtils;
+import com.example.base.utils.SerializeUtils;
 import com.example.base.utils.Sha256Hash;
 import com.example.fuzzed.ProgramService;
 import com.example.net.conf.ApplicationContextProvider;
@@ -39,18 +40,19 @@ public class ProgramServiceImpl implements ProgramService {
     private final PeerService peerService;
     // 待测程序队列，队列头为下一次fuzzing的程序
     private final ProgramQueue programQueue;
-    private final Reward reward;
     private final PayloadManager payloadManager;
     private final int MAX_REQ = 10;
+    private final NewPathManager newPathManager;
 
     @Override
-    public boolean uploadTask(String path, String fuzzPath, String name, String desc) {
+    public boolean uploadTask(String path, String fuzzPath, String name, String desc, Reward reward) {
         File file = new File(path);
         try {
             byte[] fileBytes = Files.readAllBytes(file.toPath());
-            Program program = new Program(ByteUtils.bytesToHex(Sha256Hash.hash(fileBytes)), name, desc, fileBytes,
+            Program program = new Program("", name, desc, fileBytes,
                     fuzzPath, new Peer(p2pNetConfig.getServerAddress(), p2pNetConfig.getServerPort()),
                     reward, 0, 0, 0);
+            program.setHash(ByteUtils.bytesToHex(Sha256Hash.hash(SerializeUtils.serialize(program))));
             ApplicationContextProvider.publishEvent(new NewTargetProgramEvent(program));
             programQueue.addProgramList(program);
             programQueue.addProgramMap(program);
@@ -150,6 +152,11 @@ public class ProgramServiceImpl implements ProgramService {
     public ConcurrentHashMap<String, Program> getTasks() {
         ConcurrentHashMap<String, Program> taskMap = programQueue.getTaskMap();
         return taskMap;
+    }
+
+    @Override
+    public int getCrashNum() {
+        return newPathManager.getCrashNum();
     }
 
     @Override

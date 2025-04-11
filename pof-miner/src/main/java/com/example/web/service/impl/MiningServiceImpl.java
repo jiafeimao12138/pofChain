@@ -63,6 +63,7 @@ public class MiningServiceImpl implements MiningService {
     private final Mempool mempool;
     private final TransactionService transactionService;
     private final WalletService walletService;
+    private int nBits = 6;
 
     private int hitCount = 0;
     private long endWindow = 0;
@@ -89,6 +90,8 @@ public class MiningServiceImpl implements MiningService {
     private String testcasefile;
     @Value("${enclave.path}")
     private String enclavePath;
+    @Value("${afl.signal}")
+    private String signalFile;
 
     Path path = null;
     //TODO: 每挖出x个区块更改一次head，类比bitcoin
@@ -110,7 +113,7 @@ public class MiningServiceImpl implements MiningService {
 //            logger.info("删除AFL文件错误");
 //            return;
 //        }
-        Path signalPath = Paths.get("/home/wj/dockerAFLdemo/pofChain/start_java_signal.txt");
+        Path signalPath = Paths.get(signalFile);
         try {
             Files.write(signalPath, new byte[0], StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
         } catch (IOException e) {
@@ -140,7 +143,7 @@ public class MiningServiceImpl implements MiningService {
             int exec_time = 0;
             logger.info("开始监控窗口文件");
             //@TODO: 动态调整难度
-            List<BigInteger> interval = generateRandomHashHead(5);
+            List<BigInteger> interval = generateRandomHashHead(nBits);
             BigInteger head = interval.get(0);
             BigInteger end = interval.get(1);
             try {
@@ -324,18 +327,17 @@ public class MiningServiceImpl implements MiningService {
         logger.info("本次计算区块hash的preBlock：高度为{}, Hash为{}", preBlock.getBlockHeader().getHeight(), preBlock.getBlockHash());
 
         // 从mempool中选择transactions
-        List<Transaction> transactions = chooseTransactions();
+//        List<Transaction> transactions = chooseTransactions();
+        List<Transaction> transactions = new ArrayList<>();
         // 在交易列表最前端加上coinbase交易
         Transaction coinbaseTX = createCoinbaseTX(transactions, 0, preBlock.getBlockHeader().getHeight());
-        if (transactions.size() == 0) {
-            transactions.add(coinbaseTX);
-        } else {
-            transactions.set(0, coinbaseTX);
-        }
-        Block newBlock = computeWindowHash(preBlock, transactions, triples);
+        transactions.add(coinbaseTX);
+        Block newBlock = chooseTransactions(preBlock, transactions, new CopyOnWriteArrayList<>());
+//        Block newBlock = computeWindowHash(preBlock, transactions, triples);
         String newHash = newBlock.getBlockHash();
 //        logger.info("比较一下：newHash={}, newBlock.getHash={}", newHash, newBlock.getHash());
-        logger.info("新区块中的payload长度为：{}", newBlock.getPayloads().size());
+        logger.info("本次计算区块hash：{}", newHash);
+//        logger.info("新区块中的payload长度为：{}", newBlock.getPayloads().size());
         // 当命中区间
         if(isInInterval(newHash, head, end)) {
             // 挖矿成功，并且提交payloads
@@ -394,6 +396,8 @@ public class MiningServiceImpl implements MiningService {
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
 
         logger.info("广播新Block:{}", newBlock.getBlockHash());
+        logger.info("新区块中payloads: {}", newBlock.getPayloads().size());
+        logger.info("新区块大小：{}", BlockUtils.getBlockSize(newBlock));
         endWindow = System.currentTimeMillis();
         logger.info("endWindow: {}", endWindow);
         long time = endWindow - lastWindowEnd;
@@ -416,9 +420,10 @@ public class MiningServiceImpl implements MiningService {
                 Node serverNode = channelContext.getServerNode();
                 if (serverNode.getIp().equals(supplier.getIp()) && serverNode.getPort() == supplier.getPort()) {
                     // supplier在列表中，直接发送消息即可
-                    logger.info("提交之前payloads：{}", payloadManager.getPayloads().size());
+                    logger.info("提交之前payloads：{}", BlockUtils.getPayloadSize(payloadManager.getPayloads()));
                     p2pClient.sendToNode(channelContext, messagePacket);
                     payloadManager.setNull();
+                    logger.info("提交之后payloads: {}", payloadManager.getPayloads().size());
                     return true;
                 }
             }
@@ -446,24 +451,43 @@ public class MiningServiceImpl implements MiningService {
      * 从mempool中选择待打包的交易
      * 使用贪心算法选择交易费用高的交易
      */
-    private List<Transaction> chooseTransactions() {
-        ArrayList<Transaction> transactions = new ArrayList<>();
+    private Block chooseTransactions(Block preBlock, List<Transaction> transactionList,
+                                                 CopyOnWriteArrayList<Payload> payloads) {
+        Random random = new Random();
+        long nonce = random.nextLong();
+        long timestamp = System.currentTimeMillis();
+        long height = preBlock.getBlockHeader().getHeight() + 1;
+
+
+        BlockHeader blockHeader = new BlockHeader();
+        blockHeader.setHashPreBlock(preBlock.getBlockHash());
+        blockHeader.setNTime(timestamp);
+        blockHeader.setNNonce(nonce);
+        blockHeader.setHeight(height);
+
+        Block newBlock = new Block(blockHeader, transactionList, payloads);
         if (mempool.size() == 0) {
             logger.error("mempool为空");
-            return transactions;
+            newBlock.setBlockHash(newBlock.getHash());
+            return newBlock;
         }
+        int blockSize = BlockUtils.getBlockSize(newBlock);
         Map<Transaction, Double> txOrderByFees = mempool.txOrderByFees();
-
-        int totalSize = 0;
+        int remainSize = Block.BLOCK_MAX_SIZE - blockSize;
+        int txSize = 0;
         for (Map.Entry<Transaction, Double> entry : txOrderByFees.entrySet()) {
             Transaction transaction = entry.getKey();
             int size = BlockUtils.getTransactionSize(transaction);
-            totalSize += size;
-            if (totalSize > Block.BLOCK_MAX_SIZE)
+            txSize += size;
+            if (txSize >= remainSize){
+                logger.info("transaction size = {}", txSize);
                 break;
-            transactions.add(transaction);
+            }
+            transactionList.add(transaction);
         }
-        return transactions;
+        newBlock.setTransactions(transactionList);
+        newBlock.setBlockHash(newBlock.getHash());
+        return newBlock;
     }
 
     private Transaction createCoinbaseTX(List<Transaction> transactions, int index, long height) {

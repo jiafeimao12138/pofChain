@@ -14,6 +14,7 @@ public class PayloadManager {
     private CopyOnWriteArrayList<Payload> payloadList = new CopyOnWriteArrayList<>();
     private String address;
     private Block newBlock;
+    private String signature;
 
     public PayloadManager() {
     }

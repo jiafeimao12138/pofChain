@@ -91,7 +91,6 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 programService.receiveTask(program, targetProgramQueueDir);
                 break;
             case MessagePacketType.NEW_PATH_RANK:
-                // @TODO 实时推送给前端
                 serverHandler.receiveNewPathRank(msgBody);
                 break;
             case MessagePacketType.PAYLOADS_SUBMIT:
@@ -110,7 +109,7 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
                 serverHandler.terminatingAFL();
                 break;
             case MessagePacketType.BROADCAST_TX:
-                logger.info("收到新交易");
+//                logger.info("收到新交易");
                 Transaction transaction = (Transaction) SerializeUtils.unSerialize(msgBody);
                 boolean result = serverHandler.processNewTransaction(transaction);
                 if (!result) {
@@ -120,9 +119,9 @@ public class P2pServerHandler extends BaseTioHandler implements TioServerHandler
             default:
                 logger.error("错误消息！！！");
         }
-        logger.info("server回复client: channelContext:{}", channelContext);
-        if (responsePacket != null){
-            Tio.send(channelContext, responsePacket);
-        }
+//        logger.info("server回复client: channelContext:{}", channelContext);
+//        if (responsePacket != null){
+//            Tio.send(channelContext, responsePacket);
+//        }
     }
 }

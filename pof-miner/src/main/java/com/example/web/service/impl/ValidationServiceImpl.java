@@ -52,7 +52,9 @@ public class ValidationServiceImpl implements ValidationService {
 
     // fuzzer和observer校验新区块合法性
     @Override
-    public boolean checkBlock(Block block) {
+    public boolean checkBlock(Block block, String fuzzerAddress) {
+        String blockSig = block.getBlockSig();
+        if (checkBlockSig(block, fuzzerAddress)) return false;
         long height = block.getBlockHeader().getHeight();
         // 如果这个高度的区块已经存在了, 忽略
         if (chainService.getBlockByHeight(height) != null){

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class PofRunner {
@@ -46,9 +47,14 @@ public class PofRunner {
     public boolean preparation() throws Exception {
         String commandType = parser.getArgs().get(0);
         Block block;
+        Path repoPath = Paths.get(repo);
         switch (commandType) {
             case "genesis" :
                 logger.info("创世节点启动中。。。。");
+
+                if (Files.exists(repoPath) && Files.isDirectory(repoPath)) {
+                    break;
+                }
                 dbStore = new RocksDBStore(repo);
                 block = generateGenesisBlock();
 
@@ -63,6 +69,9 @@ public class PofRunner {
 
             case "miner" :
                 logger.info("节点加入中。。。。。");
+                if (Files.exists(repoPath) && Files.isDirectory(repoPath)) {
+                    break;
+                }
                 dbStore = new RocksDBStore(repo);
                 generateGenesisBlock();
                 genPropertiesFile(parser);

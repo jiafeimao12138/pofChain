@@ -28,6 +28,7 @@ public class P2pClientListener implements TioClientListener {
             // bind peer to group
             Tio.bindGroup(channelContext, P2pNetConfig.NODE_GROUP_NAME);
             logger.info("成功绑定节点至 group: " + P2pNetConfig.NODE_GROUP_NAME);
+            channelContext.setReadBufferSize(1024 * 1024 * 50);
 //            MessagePacket hellopacket = new MessagePacket();
 //            hellopacket.setType(MessagePacketType.HELLO_MESSAGE);
 //            // 向连接的server发送握手消息

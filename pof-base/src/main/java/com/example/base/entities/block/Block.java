@@ -22,13 +22,14 @@ import java.util.Objects;
 
 @Data
 public class Block implements Serializable {
-    public final static int BLOCK_MAX_SIZE = 1 * 1024 * 100;
+    public final static int BLOCK_MAX_SIZE = 1 * 1024 * 50;
 
 //    header
     private String blockHash;
     private BlockHeader blockHeader;
     private List<Transaction> transactions = new ArrayList<>();
     private List<Payload> payloads = new ArrayList<>();
+    private String blockSig;
 
     public Block() {
     }

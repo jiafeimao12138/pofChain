@@ -90,6 +90,7 @@
 
 char s[100] = "Hello workd111\n";
 
+
 /* Lots of globals, but mostly for the status UI and other things where it
    really makes no sense to haul them around as function parameters. */
 
@@ -813,6 +814,16 @@ static void mark_as_redundant(struct queue_entry* q, u8 state) {
 
 }
 
+static void markNewPath(void* mem, u32 len) {
+ 
+  s32 testcase_fd = open("testfile1", O_RDWR | O_CREAT | O_APPEND, 0777);
+
+  
+    ck_write(testcase_fd, mem, len, "testfile1");
+    printf("newpath===============================\n");
+    close(testcase_fd);
+  
+}
 
 /* Append new test case to the queue. */
 
@@ -838,6 +849,8 @@ static void add_to_queue(u8* fname, u32 len, u8 passed_det) {
   } else q_prev100 = queue = queue_top = q;
 
   queued_paths++;  // queue计数器加1
+  // 记录新路径
+  markNewPath("newpath", strlen("newpath"));
   pending_not_fuzzed++;   // 待fuzz的样例计数器加1   
 
   cycles_wo_finds = 0;
@@ -2199,7 +2212,7 @@ EXP_ST void init_forkserver(char** argv) {
 // 以读取的结果判断fork server是否成功启动
 // 如果读取到4字节的"hello"信息就说明启动成功，否则启动失败
   if (rlen == 4) {
-    OKF("All right - fork server is up.=========");
+    OKF("All right - fork server is up.=========lalalal");
     return;
   }
  // 子进程启动失败的异常处理相关
@@ -2622,7 +2635,8 @@ static void write_to_testcase(void* mem, u32 len) {
   if(strstr(mem, "mem=") != NULL){
     printf(mem);
   }
-  if(iscrash == 0){
+
+  if(iscrash == 0) {
     ck_write(testcase_fd, "mem=", 4, "testfile1");
     ck_write(testcase_fd, mem, len, "testfile1");
     ck_write(testcase_fd, "stop", 4, "testfile1");
@@ -2647,9 +2661,12 @@ static void write_to_testcase(void* mem, u32 len) {
       lseek(fd, 0, SEEK_SET);
 
     } else close(fd);
-  }
-//  将save_if_interesting中判断出的crash记录到文件中,添加到最后即可，因为最后一个case就是上一个执行的case
+
+   }
   else {
+
+//  将save_if_interesting中判断出的crash记录到文件中,添加到最后即可，因为最后一个case就是上一个执行的case
+
      ck_write(testcase_fd, mem, len, "testfile1");
      close(testcase_fd);
 //     把该标志重新设置为0
@@ -4892,6 +4909,8 @@ EXP_ST u8 common_fuzz_stuff(char** argv, u8* out_buf, u32 len) {
 //  如果是crash,则将它记入testfile1中
   if(iscrash == 1){
      write_to_testcase("crash", strlen("crash"));
+     printf("===================================crash\n");
+     iscrash = 0;
   }
 
     

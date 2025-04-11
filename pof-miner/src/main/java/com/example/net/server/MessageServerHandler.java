@@ -19,7 +19,6 @@ import com.example.net.events.NewBlockEvent;
 import com.example.net.events.NewPeerEvent;
 import com.example.net.events.NewTransactionEvent;
 import com.example.net.events.TerminateAFLEvent;
-import com.example.base.entities.Reward;
 import com.example.web.service.*;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -57,8 +56,6 @@ public class MessageServerHandler {
     private final TransactionService transactionService;
     private final WalletService walletService;
     private final com.example.base.entities.Node node;
-    private final DBStore dbStore;
-    private final Reward reward;
 
     private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private final Lock writeLock = rwl.writeLock();
@@ -177,7 +174,7 @@ public class MessageServerHandler {
         // 移除已打包的交易
         validationService.removeTransactions(newBlock);
         logger.info("校验新区块成功并存入数据库，hash={}, height={}", newBlock.getBlockHash(), newBlock.getBlockHeader().getHeight());
-        logger.info("新区块：{}", newBlock);
+//        logger.info("新区块：{}", newBlock);
         // 广播给其他peer
         ApplicationContextProvider.publishEvent(new NewBlockEvent(newBlock));
         // 计算上一个区块时间内的新路径贡献度排名
@@ -192,6 +189,9 @@ public class MessageServerHandler {
         double pathEfficiency = (double) newPathNum / totalPath;
         logger.info("newPathNum: {}, totalPath: {}", newPathNum, totalPath);
         logger.info("有效路径率：{}", pathEfficiency);
+
+        // 计算crash数量
+
 
         // 发送新路径奖励
         // TODO: 所有新路径一起接收，等到最后再人工发奖励
@@ -276,8 +276,8 @@ public class MessageServerHandler {
         logger.info("收到本轮新路径排名");
         LinkedHashMap<String, List<NewPath>> rank =
                 (LinkedHashMap<String, List<NewPath>>) SerializeUtils.unSerialize(msgBody);
-        rank.entrySet().stream().forEach(stringListEntry ->
-                System.out.println(stringListEntry.getKey() + ":" + stringListEntry.getValue()));
+//        rank.entrySet().stream().forEach(stringListEntry ->
+//                System.out.println(stringListEntry.getKey() + ":" + stringListEntry.getValue()));
     }
 
     // supplier接收并处理fuzzer提交的payloads
@@ -285,20 +285,23 @@ public class MessageServerHandler {
         PayloadManager payloadManager = (PayloadManager) SerializeUtils.unSerialize(msgBody);
         String programHash = payloadManager.getProgramHash();
         List<Payload> pathList = payloadManager.getPayloads();
+        String minerAddress = payloadManager.getAddress();
+        String sig = payloadManager.getSignature();
+//        if(!payloadManager.isProgramExist(programHash) ||
+//                !payloadManager.sigValidation(pathList, sig, minerAddress))
+//            return false;
         logger.info("收到的payloads的大小:{}", pathList.size());
-        String address = payloadManager.getAddress();
         Block newBlock = payloadManager.getNewBlock();
         // 先校验newBlock
         if(validationService.supplierCheckNewBlock(newBlock)) {
             logger.info("通过supplier校验，开始筛选NewPath");
-            List<NewPath> newPaths = newPathService.ProcessPayloads(programHash, pathList, timestamp, address);
-
+            List<NewPath> newPaths = newPathService.ProcessPayloads(programHash, pathList, timestamp, minerAddress);
             if (newPaths.isEmpty()) {
                 logger.info("No new path found");
             } else {
                 logger.info("New Path: {}", newPaths.size());
                 // 添加到NewPathMap中，等待排名
-                newPathManager.addPathHashMap(address, newPaths);
+                newPathManager.addPathHashMap(minerAddress, newPaths);
                 HashMap<String, List<NewPath>> newPathMap = newPathManager.getPaths();
                 logger.info("NewPathMap: size={}", newPathMap.size());
                 newPathManager.updateProgramPathInfo(programHash, newPaths.size(), newPathManager.getTotalPath());

@@ -1,23 +1,29 @@
 package com.example.web.controller;
 
+import com.example.base.entities.NewPathManager;
 import com.example.base.entities.Program;
 import com.example.base.entities.block.Block;
 import com.example.base.utils.BlockUtils;
+import com.example.base.utils.LoggingMonitor;
 import com.example.base.vo.JsonVo;
 import com.example.fuzzed.ProgramService;
 import com.example.net.base.Mempool;
 import com.example.web.service.ChainService;
 import com.example.web.service.impl.FakeTXGenerator;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.IntStream;
 
 @RestController
 @RequestMapping("common")
@@ -28,9 +34,11 @@ public class CommonController {
     private final FakeTXGenerator generator;
     private final ProgramService programService;
     private final Mempool mempool;
+    private final NewPathManager newPathManager;
 
     @RequestMapping("generateFakeTXs")
     public void generateFakeTXs() throws Exception {
+        generator.generateInitialUTXO(50);
         while (true) {
             try {
                 generator.generateTransactions();
@@ -40,7 +48,6 @@ public class CommonController {
                 e.printStackTrace(); // 如果线程在睡眠期间被中断，捕获异常
             }
         }
-
     }
 
     @RequestMapping("getMempoolSize")
@@ -145,9 +152,9 @@ public class CommonController {
         return jsonVo;
     }
 
-    // 请求区块平均生成时间
+    // 请求区块平均生成时间，并写入文件
     @RequestMapping("getAvgBlockTime")
-    public double getAvgBlockTime() {
+    public String getAvgBlockTime() {
         long prevTime = chainService.getBlockByHeight(1).getBlockHeader().getNTime();
         long chainHeight = chainService.getChainHeight();
         ArrayList<Double> diffList = new ArrayList<>();
@@ -162,7 +169,27 @@ public class CommonController {
                 .mapToDouble(Double::doubleValue)
                 .average()
                 .orElse(0.0);
-        return avg;
+        // 写入文件
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("block_time_diffs.txt"))) {
+            IntStream.range(0, diffList.size())
+                    .forEach(i -> {
+                        try {
+                            writer.write(i + ": " + diffList.get(i));
+                            writer.newLine();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return String.format("%.2f", avg);
+    }
+
+    // 请求crash数量
+    @RequestMapping("getCrashNum")
+    public int getCrashNum() {
+        return programService.getCrashNum();
     }
 
     // 请求最新50个区块的生成时间
@@ -184,7 +211,7 @@ public class CommonController {
     }
 
     @RequestMapping("getBlockAvgSize")
-    public double getBlockAvgSize() {
+    public String getBlockAvgSize() {
         long chainHeight = chainService.getChainHeight();
         ArrayList<Integer> sizeList = new ArrayList<>();
         for (int i = 1; i <= chainHeight; i++) {
@@ -197,14 +224,39 @@ public class CommonController {
                 .mapToInt(Integer::intValue)
                 .average()
                 .orElse(0.0);
-        return avgSize;
+        double size = avgSize / 1024;
+        return String.format("%.2f", size);
     }
 
-//    @RequestMapping("getTotalNewPath")
-//    public long getTotalNewPath() {
-//
-//    }
+    @RequestMapping("getTotalNewPath")
+    public long getTotalNewPath() {
+        HashMap<String, MutablePair<Long, Long>> programPathInfo =
+                newPathManager.getProgramPathInfo();
+        long newPath = 0;
+        for (Map.Entry<String, MutablePair<Long, Long>> entry : programPathInfo.entrySet()) {
+            MutablePair<Long, Long> value = entry.getValue();
+            newPath += value.getLeft();
+        }
+        return newPath;
+    }
 
+    // 获取随时间的新路径变化
+    @RequestMapping("getNewPathList")
+    public TreeMap<Long, Long> getNewPathList() {
+        HashMap<Long, Long> map = LoggingMonitor.readLogFile();
+        TreeMap<Long, Long> sortedMap = new TreeMap<>(map);
+        return sortedMap;
+    }
 
+    @RequestMapping("getConfirmedTXs")
+    public int getConfirmedTXs() {
+        int totalSize = 0;
+        long chainHeight = chainService.getChainHeight();
+        for (int i = 1; i <= chainHeight; i++) {
+            int size = chainService.getBlockByHeight(i).getTransactions().size();
+            totalSize += size;
+        }
+        return totalSize;
+    }
 
 }

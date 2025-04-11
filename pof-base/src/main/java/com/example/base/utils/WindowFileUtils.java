@@ -47,20 +47,43 @@ public class WindowFileUtils {
             }
         }
         String pathstr = stringBuilder.toString();
+//        System.out.println(pathstr);
+        System.out.println(hexToAscii(pathstr));
+//        if (pathstr.contains("6372617368"))
+//            System.out.println("crash");
+        if (pathstr.contains("6E657770617468"))
+            System.out.println("newpath");
 
         // 说明被截断了，要把recordFile中的加上
 //        if (!pathstr.startsWith("6D656D3D"))
         pathstr = lastWinCase + pathstr;
         String[] split = pathstr.split("6D656D3D");
 
+
         // 不處理最後一個case，因為有可能是截斷路徑
         for (int i = 1; i < split.length - 1; i++) {
+            boolean isCrash = false;
 //            System.out.println(i + ":" + split[i]);
+            if (split[i].contains("6372617368")){
+//                System.out.println("crash:" + i);
+//                System.out.println(split[i]);
+                String[] split1 = split[i].split("73746F70");
+//                System.out.println("input:" + hexToAscii(split1[0]) + ":" + split1[1]);
+                isCrash = true;
+            }
+//            System.out.println(split[i]);
             String[] split1 = split[i].split("73746F70");
             // 截断路径
             if (split1.length < 2){
-                String input = split1[0];
+                if (isCrash == true) {
+                    String input = split1[0];
 //                System.out.println(i + ":" + hexToAscii(input));
+                    Payload payload = new Payload(input, new ArrayList<>(), isCrash);
+                    payloadsList.add(payload);
+                }
+                else{
+//                    System.out.println(i + ": split1.length < 2:" + hexToAscii(split1[0]));
+                }
                 continue;
             }
 
@@ -78,13 +101,14 @@ public class WindowFileUtils {
                 pathList.add(path_num << 1);
                 index += 4;
             }
+            List<Integer> paths = removeConsecutiveDuplicates(pathList);
 
-            if(pathSet.add(pathList)){
-//                System.out.println(i + ":" + pathList.size());
+            if(pathSet.add(paths)){
+//                System.out.println("pathSet " + i + ":" + hexToAscii(input) + ":" + pathList);
             }
-            Payload payload = new Payload(input, pathList, false);
+            Payload payload = new Payload(input, paths, isCrash);
             payloadsList.add(payload);
-//            System.out.println(i + ":" + hexToAscii(input) + ":" + pathList);
+//            System.out.println(i + ":" + hexToAscii(input) + ":" + paths + isCrash);
 //            System.out.println(i + ":" + input + ":" + pathList);
         }
         // 存储最后一个case，可能被截断也可能是完整的
@@ -93,6 +117,7 @@ public class WindowFileUtils {
         System.out.println("===========新路径数量:" + pathSet.size());
         System.out.println("===========总路径数量：" + split.length);
         System.out.println("===========payloads: " + payloadsList.size());
+
         return payloadsList;
     }
 
@@ -105,6 +130,23 @@ public class WindowFileUtils {
             output.append((char) decimal);
         }
         return output.toString();
+    }
+
+    public static List<Integer> removeConsecutiveDuplicates(List<Integer> list) {
+        if (list.isEmpty()) {
+            return list;
+        }
+
+        List<Integer> result = new ArrayList<>();
+        result.add(list.get(0)); // 先添加第一个元素
+
+        for (int i = 1; i < list.size(); i++) {
+            if (!list.get(i).equals(list.get(i - 1))) { // 只有不相同时才添加
+                result.add(list.get(i));
+            }
+        }
+
+        return result;
     }
 
     public static CopyOnWriteArrayList<Payload> windowFilesToTriple(String testcase, String paths, String recordFile) throws WindowFileException{

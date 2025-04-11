@@ -31,6 +31,13 @@ public class NewPathServiceImpl implements NewPathService {
     private final Lock readLock = rwl.readLock();
     private final Lock writeLock = rwl.writeLock();
 
+
+    @Override
+    public List<NewPath> preProcessPayloads(List<Payload> payloads) {
+
+        return Collections.emptyList();
+    }
+
     /**
      * 处理payloads，以及测试指标
      * @param payloads
@@ -46,6 +53,7 @@ public class NewPathServiceImpl implements NewPathService {
             // 如果是潜在漏洞
             if (payload.isCrash()) {
                 // @TODO 需要交给supplier手动验证处理
+                newPathManager.updateProgramCrashInfo(programHash, payload.getInput());
             } else {
                 List<Integer> path = payload.getPath();
                 paths.add(path);
@@ -64,7 +72,7 @@ public class NewPathServiceImpl implements NewPathService {
             // 如果hash值存在，则先判断是否hash碰撞，没有碰撞的话表示这个path已经存在，不是新路径，舍弃即可
             if (o.isPresent()) {
                 List<Integer> rockspath = (List<Integer>) o.get();
-                logger.info("路径已存在，{}", rockspath);
+//                logger.info("路径已存在");
             }else {
                 writeLock.lock();
                 // 数据库中没有该路径，表明这是一个新路径，那么存入数据库中
@@ -103,8 +111,8 @@ public class NewPathServiceImpl implements NewPathService {
                         (e1,e2)->e1,
                         LinkedHashMap::new));
         // 广播
-        ApplicationContextProvider.publishEvent(new NewPathRank(sortedmap));
-        logger.info("已广播本轮Fuzzing的新路径排名");
+//        ApplicationContextProvider.publishEvent(new NewPathRank(sortedmap));
+//        logger.info("已广播本轮Fuzzing的新路径排名");
         return sortedmap;
     }
 

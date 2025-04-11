@@ -20,12 +20,11 @@ import org.springframework.util.CollectionUtils;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -106,17 +105,39 @@ public class WalletServiceImpl implements WalletService {
      */
     @Override
     public void removeSpentTXOutput(Transaction transaction) {
+//        System.out.println("transaction input:" + transaction.getInputs());
         writeLock.lock();
         List<TXInput> inputs = transaction.getInputs();
+        // 标记要删除的索引
+        HashMap<String, List<Integer>> inputOutputMap = new HashMap<>();
         for (TXInput input : inputs) {
             String TXId = ByteUtils.bytesToHex(input.getPreviousTXId());
+
+            List<Integer> indexs = inputOutputMap.get(TXId);
+            if (indexs == null) {
+                ArrayList<Integer> list = new ArrayList<>();
+                list.add(input.getTxOutputIndex());
+                inputOutputMap.put(TXId, list);
+            } else {
+                indexs.add(input.getTxOutputIndex());
+                inputOutputMap.put(TXId, indexs);
+            }
+
+        }
+        for (Map.Entry<String, List<Integer>> entry : inputOutputMap.entrySet()) {
+            String TXId = entry.getKey();
             List<TXOutput> utxos = dbStore.getUTXO(WalletPrefix.UTXO_PREFIX.getPrefix() + TXId);
             if (CollectionUtils.isEmpty(utxos))
-                break;
-            utxos.remove(input.getTxOutputIndex());
+                continue;
+            List<Integer> indexsList = entry.getValue();
+            // 过滤列表
+            List<TXOutput> newutxo = IntStream.range(0, utxos.size())
+                    .filter(i -> !indexsList.contains(i))  // 保留未被删除的索引
+                    .mapToObj(utxos::get)
+                    .collect(Collectors.toList());
             dbStore.delete(WalletPrefix.UTXO_PREFIX.getPrefix() + TXId);
             if (!CollectionUtils.isEmpty(utxos)){
-                dbStore.put(WalletPrefix.UTXO_PREFIX.getPrefix() + TXId, utxos);
+                dbStore.put(WalletPrefix.UTXO_PREFIX.getPrefix() + TXId, newutxo);
             }
         }
         writeLock.unlock();

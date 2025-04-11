@@ -166,7 +166,6 @@ static void edit_params(int argc, char** argv) {
 #endif /* __APPLE__ */
 
     as_params[as_par_cnt++] = argv[i];
-    // printf("argv[%d]=%s\n",i,argv[i]);
 
   }
 
@@ -186,7 +185,6 @@ static void edit_params(int argc, char** argv) {
 #endif /* __APPLE__ */
 
   input_file = argv[argc - 1];
-  printf("input_file=%s\n",input_file);
 
   if (input_file[0] == '-') {
 
@@ -219,7 +217,6 @@ wrap_things_up:
 
   as_params[as_par_cnt++] = modified_file;
   as_params[as_par_cnt]   = NULL;
-  printf("as_par_cnt=%d\n",as_par_cnt);
 
 }
 
@@ -238,8 +235,6 @@ static void add_instrumentation(void) {
 
   u8  instr_ok = 0, skip_csect = 0, skip_next_label = 0,
       skip_intel = 0, skip_app = 0, instrument_next = 0;
-
-  u8 file_line = 0;
 
 #ifdef __APPLE__
 
@@ -262,12 +257,7 @@ static void add_instrumentation(void) {
 
   if (!outf) PFATAL("fdopen() failed");  
 
-  // printf("==============input_file=============\n");
   while (fgets(line, MAX_LINE, inf)) {
-
-    file_line ++;
-
-    // printf(line);
 
     /* In some cases, we want to defer writing the instrumentation trampoline
        until after all the labels, macros, comments, etc. If we're in this
@@ -276,14 +266,9 @@ static void add_instrumentation(void) {
 
     if (!pass_thru && !skip_intel && !skip_app && !skip_csect && instr_ok &&
         instrument_next && line[0] == '\t' && isalpha(line[1])) {
-      int random_key = R(MAP_SIZE);
-      printf("random_key=%d\n",random_key);
-      // 保存random_key
 
-      printf(line);
-      // printf("file_line=%d\n",file_line);
       fprintf(outf, use_64bit ? trampoline_fmt_64 : trampoline_fmt_32,
-              random_key);
+              R(MAP_SIZE));
 
       instrument_next = 0;
       ins_lines++;
@@ -387,12 +372,9 @@ static void add_instrumentation(void) {
     if (line[0] == '\t') {
 
       if (line[1] == 'j' && line[2] != 'm' && R(100) < inst_ratio) {
-        int random_key = R(MAP_SIZE);
-        printf(line);
-        printf("random_key=%d\n",random_key);
-        // printf("file_line=%d\n",file_line);
+
         fprintf(outf, use_64bit ? trampoline_fmt_64 : trampoline_fmt_32,
-                random_key);
+                R(MAP_SIZE));
 
         ins_lines++;
 
@@ -473,7 +455,7 @@ static void add_instrumentation(void) {
     fputs(use_64bit ? main_payload_64 : main_payload_32, outf);
     fputs(my_asm, outf);
   }
-
+    
 
   if (input_file) fclose(inf);
   fclose(outf);
@@ -496,10 +478,6 @@ static void add_instrumentation(void) {
 /* Main entry point */
 
 int main(int argc, char** argv) {
-
-  printf("==============This is afl-as.c==============\n");
-
-  
 
   s32 pid;
   u32 rand_seed;
@@ -536,14 +514,9 @@ int main(int argc, char** argv) {
 
   rand_seed = tv.tv_sec ^ tv.tv_usec ^ getpid();
 
-  // printf("rand_seed=%d\n",rand_seed);
-
   srandom(rand_seed);
 
   edit_params(argc, argv);
-
-  
-
 
   if (inst_ratio_str) {
 
@@ -579,32 +552,9 @@ int main(int argc, char** argv) {
 
   if (waitpid(pid, &status, 0) <= 0) PFATAL("waitpid() failed");
 
-  // static u8 line[MAX_LINE];
-  // FILE* outfile;
-  // outfile = fopen(modified_file,"r");
-  // if (outfile==NULL)
-  // {
-  //   /* code */
-  //   printf("读取错误");
-  // }
-  
-  // while (fgets(line, sizeof(outfile), outfile))
-  // {
-  //   printf("%s",line);
-  // }
-
-  // if (!getenv("AFL_KEEP_ASSEMBLY")) unlink(modified_file);
-  // printf("modified_file=%s\n",modified_file);
-
-  // printf("\n");
-
-  // for (int i = 0; i < sizeof(as_params); i++){
-  //   printf("as_params[%d]:%s\n", i, as_params[i]);
-  // }
+  if (!getenv("AFL_KEEP_ASSEMBLY")) unlink(modified_file);
 
   exit(WEXITSTATUS(status));
-
-  
 
 }
 

@@ -10,9 +10,9 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**") // 允许所有路径
-                .allowedOrigins("http://192.168.0.137:8080") // Vue 前端地址
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowCredentials(true);
+                .allowedOrigins("*") // 允许所有地址访问
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
+//                .allowCredentials(true);
     }
 }
 
