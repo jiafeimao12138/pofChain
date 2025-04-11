@@ -53,7 +53,7 @@ public class NewPathServiceImpl implements NewPathService {
             // 如果是潜在漏洞
             if (payload.isCrash()) {
                 // @TODO 需要交给supplier手动验证处理
-                newPathManager.updateProgramCrashInfo(programHash, payload.getInput());
+//                newPathManager.updateProgramCrashInfo(programHash, payload.getInput());
             } else {
                 List<Integer> path = payload.getPath();
                 paths.add(path);
@@ -80,7 +80,7 @@ public class NewPathServiceImpl implements NewPathService {
                 dbStore.put(PathPrefix.PATH_FUZZER_PREFIX.getPrefix() + pathHash, fuzzerAddress );
                 dbStore.put(PathPrefix.PATH_TIME_PREFIX.getPrefix() + pathHash, timestamp);
                 NewPath newPath = new NewPath();
-                newPath.setPath(path);
+//                newPath.setPath(path);
                 newPath.setFuzzerAddress(fuzzerAddress);
                 newPath.setTimestamp(timestamp);
                 newPahtList.add(newPath);
@@ -114,6 +114,47 @@ public class NewPathServiceImpl implements NewPathService {
 //        ApplicationContextProvider.publishEvent(new NewPathRank(sortedmap));
 //        logger.info("已广播本轮Fuzzing的新路径排名");
         return sortedmap;
+    }
+
+    @Override
+    public List<NewPath> processPathandCrash(String programHash, List<String> pathHashList, HashMap<String, String> crashMap,
+                                             String fuzzerAddress, long timestamp) {
+        ArrayList<NewPath> newPathList = new ArrayList<>();
+        // 记录crash
+        if (!crashMap.isEmpty()) {
+            for (Map.Entry<String, String> entry : crashMap.entrySet()) {
+                newPathManager.updateProgramCrashInfo(programHash, entry.getKey());
+            }
+        }
+        // 记录路径哈希
+        // 先去重
+        HashSet<String> pathHashSet = new HashSet<>();
+        for (String hash : pathHashList) {
+            pathHashSet.add(hash);
+        }
+        // 和数据库比较
+        for (String pathHash : pathHashSet) {
+            readLock.lock();
+            Optional<Object> o = dbStore.get(PathPrefix.PATH_PREFIX.getPrefix() + pathHash);
+            readLock.unlock();
+            // 如果hash值存在，则先判断是否hash碰撞，没有碰撞的话表示这个path已经存在，不是新路径，舍弃即可
+            if (o.isPresent()) {
+                List<Integer> rockspath = (List<Integer>) o.get();
+//                logger.info("路径已存在");
+            }else {
+                writeLock.lock();
+                // 数据库中没有该路径，表明这是一个新路径，那么存入数据库中
+                dbStore.put(PathPrefix.PATH_PREFIX.getPrefix() + pathHash, fuzzerAddress);
+                NewPath newPath = new NewPath();
+                newPath.setPathHash(pathHash);
+                newPath.setFuzzerAddress(fuzzerAddress);
+                newPath.setTimestamp(timestamp);
+                newPathList.add(newPath);
+//                logger.info("newPath存入数据库：{}", newPath);
+                writeLock.unlock();
+            }
+        }
+        return newPathList;
     }
 
 }

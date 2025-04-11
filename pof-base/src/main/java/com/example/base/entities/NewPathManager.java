@@ -14,6 +14,10 @@ import java.util.List;
 @Component
 @Data
 public class NewPathManager {
+    // 新改的
+
+
+    // 新改的
     private HashMap<String, List<NewPath>> paths = new HashMap<>();
     private HashSet<String> crashSet = new HashSet<>();
     private HashMap<String, HashSet<String>> programCrashInfo = new HashMap<>();

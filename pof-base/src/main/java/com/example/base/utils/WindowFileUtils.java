@@ -9,10 +9,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 
@@ -28,6 +25,50 @@ public class WindowFileUtils {
     static String lastWindowcase = "";
     static List<Integer> lastWindowpath = new ArrayList<>();
 
+    public static void parsePayloadsFile(String testfile){
+        HashMap<String, String> crashMap = new HashMap<>();
+        List<String> pathHash = new ArrayList<>();
+        String lastHashLine = "";
+        try (BufferedReader reader = new BufferedReader(new FileReader(testfile))) {
+            String line;
+            String crash_firstHalf = "";
+            int line_count = 0;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("crash")){
+                    if (line.contains("stop")){
+                        int startIndex = line.indexOf("crash") + 5;
+                        int endIndex = line.indexOf("stop");
+                        String crashInput = line.substring(startIndex, endIndex);
+                        crashMap.put(crashInput, lastHashLine);
+//                        System.out.println(crashInput);
+                    }
+                    else {
+                        int startIndex = line.indexOf("crash") + 5;
+                        crash_firstHalf = line.substring(startIndex);
+                    }
+                }else if (line.contains("stop") && !line.contains("crash")) {
+                    int endIndex = line.indexOf("stop");
+                    String crashInput = crash_firstHalf + line.substring(0, endIndex);
+//                    System.out.println(crashInput);
+                    crashMap.put(crashInput, lastHashLine);
+                    crash_firstHalf = "";
+                } else if(line=="") {
+                    crash_firstHalf += "\n";
+                } else {
+                    pathHash.add(line);
+                    lastHashLine = line;
+                }
+                line_count ++;
+            }
+//            System.out.println("=================");
+//            for (Map.Entry<String, String> entry : crashMap.entrySet()) {
+//                System.out.println(entry.getKey()+":"+entry.getValue());
+//            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 
     public static CopyOnWriteArrayList<Payload> parsetestfile(String testfile, String recordFile) throws IOException {
@@ -48,7 +89,7 @@ public class WindowFileUtils {
         }
         String pathstr = stringBuilder.toString();
 //        System.out.println(pathstr);
-        System.out.println(hexToAscii(pathstr));
+//        System.out.println(hexToAscii(pathstr));
 //        if (pathstr.contains("6372617368"))
 //            System.out.println("crash");
         if (pathstr.contains("6E657770617468"))
@@ -108,7 +149,7 @@ public class WindowFileUtils {
             }
             Payload payload = new Payload(input, paths, isCrash);
             payloadsList.add(payload);
-//            System.out.println(i + ":" + hexToAscii(input) + ":" + paths + isCrash);
+            System.out.println(i + ":" + hexToAscii(input) + ":" + paths + isCrash);
 //            System.out.println(i + ":" + input + ":" + pathList);
         }
         // 存储最后一个case，可能被截断也可能是完整的
@@ -397,9 +438,10 @@ public class WindowFileUtils {
 //                System.out.println();
 //            }
 //        System.out.println("triple size: " + triples.size());
-        WindowFileUtils.parsetestfile("/home/wj/dockerAFLdemo/pofChain/AFL/testfile1",
-                "/home/wj/dockerAFLdemo/pofChain/fuzzingfiles/windows/recordFile");
+//        WindowFileUtils.parsetestfile("/home/wj/potrace/testfile1",
+//                "/home/wj/potrace/recordFile");
 //        System.out.println(readLastCase("/home/wj/dockerAFLdemo/pofChain/fuzzingfiles/windows/recordFile"));
+        WindowFileUtils.parsePayloadsFile("/home/wj/dockerAFLdemo/pofChain/AFL/payloads.txt");
 
     }
 

@@ -284,7 +284,9 @@ public class MessageServerHandler {
     public synchronized boolean processPayloads(byte[] msgBody, long timestamp) {
         PayloadManager payloadManager = (PayloadManager) SerializeUtils.unSerialize(msgBody);
         String programHash = payloadManager.getProgramHash();
-        List<Payload> pathList = payloadManager.getPayloads();
+//        List<Payload> pathList = payloadManager.getPayloads();
+        ArrayList<String> pathList = payloadManager.getPathHashList();
+        HashMap<String, String> crashMap = payloadManager.getCrashMap();
         String minerAddress = payloadManager.getAddress();
         String sig = payloadManager.getSignature();
 //        if(!payloadManager.isProgramExist(programHash) ||
@@ -295,7 +297,8 @@ public class MessageServerHandler {
         // 先校验newBlock
         if(validationService.supplierCheckNewBlock(newBlock)) {
             logger.info("通过supplier校验，开始筛选NewPath");
-            List<NewPath> newPaths = newPathService.ProcessPayloads(programHash, pathList, timestamp, minerAddress);
+//            List<NewPath> newPaths = newPathService.ProcessPayloads(programHash, pathList, timestamp, minerAddress);
+            List<NewPath> newPaths = newPathService.processPathandCrash(programHash, pathList, crashMap, minerAddress, timestamp);
             if (newPaths.isEmpty()) {
                 logger.info("No new path found");
             } else {

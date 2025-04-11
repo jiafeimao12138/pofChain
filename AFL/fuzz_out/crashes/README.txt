@@ -1,6 +1,6 @@
 Command line used to find this crash:
 
-afl-fuzz -i fuzz_in/ -o fuzz_out ./afl_testfiles/objfiles/string_length
+afl-fuzz -i fuzz_in/ -o fuzz_out ./afl_testfiles/test_afl_files/string_length_4_11
 
 If you can't reproduce a bug outside of afl-fuzz, be sure to set the same
 memory limit. The limit used for this fuzzing session was 50.0 MB.

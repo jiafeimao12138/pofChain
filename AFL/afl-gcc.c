@@ -309,6 +309,8 @@ static void edit_params(u32 argc, char** argv) {
 
 int main(int argc, char** argv) {
 
+  printf("==============This is afl-gcc.c==============\n");
+
   if (isatty(2) && !getenv("AFL_QUIET")) {
 
     SAYF(cCYA "afl-cc " cBRI VERSION cRST " by <lcamtuf@google.com>\n");
@@ -335,7 +337,15 @@ int main(int argc, char** argv) {
 
   find_as(argv[0]);
 
+  printf("as_path=%s\n",as_path);
+
   edit_params(argc, argv);
+
+  printf("\n");
+  for (int i = 0; i < sizeof(cc_params); i++)
+  {
+    printf("arg[%d]=%s\n",i,cc_params[i]);
+  }
 
   execvp(cc_params[0], (char**)cc_params);
 

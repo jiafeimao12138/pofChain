@@ -58,7 +58,7 @@ public class MiningServiceImpl implements MiningService {
     // 存储中间值
     private final PayloadManager payloadManager;
     private final ProgramQueue programQueue;
-    private CopyOnWriteArrayList<Payload> triples;
+//    private CopyOnWriteArrayList<Payload> triples;
     private final com.example.base.entities.Node node1;
     private final Mempool mempool;
     private final TransactionService transactionService;
@@ -317,12 +317,14 @@ public class MiningServiceImpl implements MiningService {
             logger.info("testcaseFile为空");
             return;
         }
-        triples = WindowFileUtils.parsetestfile(
-                testcaseFile.toAbsolutePath().toString(),
-                recordFile
-                );
+//        triples = WindowFileUtils.parsetestfile(
+//                testcaseFile.toAbsolutePath().toString(),
+//                recordFile
+//                );
+        // 向payloadManager中添加信息
+        parsePayloadsFile(testcaseFile.toAbsolutePath().toString());
         // 向中间值添加本轮挖矿的path信息，等到新区块成功挖出后再置空
-        payloadManager.addPayloads(triples);
+//        payloadManager.addPayloads(triples);
         Block preBlock = chainService.getLocalLatestBlock();
         logger.info("本次计算区块hash的preBlock：高度为{}, Hash为{}", preBlock.getBlockHeader().getHeight(), preBlock.getBlockHash());
 
@@ -353,7 +355,7 @@ public class MiningServiceImpl implements MiningService {
         BigInteger newHashInteger = new BigInteger(newHash, 16);
 //        String content = "," + hitCount + "," + fileNum + "," + newHashInteger + "\n";
 //        Files.write(this.path, content.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-        triples.clear();
+//        triples.clear();
         // 清空文件内容
         Files.newBufferedWriter(testcaseFile).close();
         logger.info("已清空窗口文件");
@@ -422,6 +424,7 @@ public class MiningServiceImpl implements MiningService {
                     // supplier在列表中，直接发送消息即可
                     logger.info("提交之前payloads：{}", BlockUtils.getPayloadSize(payloadManager.getPayloads()));
                     p2pClient.sendToNode(channelContext, messagePacket);
+                    // 提交完后清空
                     payloadManager.setNull();
                     logger.info("提交之后payloads: {}", payloadManager.getPayloads().size());
                     return true;
@@ -508,6 +511,53 @@ public class MiningServiceImpl implements MiningService {
         Transaction coinbaseTransaction = transactionService.
                 createCoinbaseTransaction(address, height, Transaction.BLOCK_REWARD, feeTotal);
         return coinbaseTransaction;
+    }
+
+    public void parsePayloadsFile(String testfile){
+        HashMap<String, String> crashMap = new HashMap<>();
+        List<String> pathHash = new ArrayList<>();
+        String lastHashLine = "";
+        try (BufferedReader reader = new BufferedReader(new FileReader(testfile))) {
+            String line;
+            String crash_firstHalf = "";
+            int line_count = 0;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("crash")){
+                    if (line.contains("stop")){
+                        int startIndex = line.indexOf("crash") + 5;
+                        int endIndex = line.indexOf("stop");
+                        String crashInput = line.substring(startIndex, endIndex);
+                        crashMap.put(crashInput, lastHashLine);
+//                        System.out.println(crashInput);
+                    }
+                    else {
+                        int startIndex = line.indexOf("crash") + 5;
+                        crash_firstHalf = line.substring(startIndex);
+                    }
+                }else if (line.contains("stop") && !line.contains("crash")) {
+                    int endIndex = line.indexOf("stop");
+                    String crashInput = crash_firstHalf + line.substring(0, endIndex);
+//                    System.out.println(crashInput);
+                    crashMap.put(crashInput, lastHashLine);
+                    crash_firstHalf = "";
+                } else if(line=="") {
+                    crash_firstHalf += "\n";
+                } else {
+                    pathHash.add(line);
+                    lastHashLine = line;
+                }
+                line_count ++;
+            }
+//            System.out.println("=================");
+//            for (Map.Entry<String, String> entry : crashMap.entrySet()) {
+//                System.out.println(entry.getKey()+":"+entry.getValue());
+//            }
+            payloadManager.addPathHashList(pathHash);
+            payloadManager.addCrashMap(crashMap);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
     
     @Override

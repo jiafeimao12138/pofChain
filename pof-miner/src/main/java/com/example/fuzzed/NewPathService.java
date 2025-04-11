@@ -16,4 +16,6 @@ public interface NewPathService {
     // supplier产生本轮挖矿的新路径贡献度排名
     Map<String, List<NewPath>> NewPathContributionRank(HashMap<String, List<NewPath>> groupNewPath);
 
+    List<NewPath> processPathandCrash(String programHash, List<String> pathHashList, HashMap<String, String> crashMap, String fuzzerAddress, long timestamp);
+
 }
